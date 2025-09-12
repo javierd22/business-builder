@@ -9,11 +9,20 @@ export default function Dashboard() {
   const [name, setName] = useState("");
   const [idea, setIdea] = useState("");
 
-  // Load saved projects on first render
+  // Load saved projects and migrate any old string entries -> {name, idea:""}
   useEffect(() => {
     try {
       const raw = localStorage.getItem("projects");
-      if (raw) setProjects(JSON.parse(raw));
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw) as Array<Project | string>;
+      const normalized: Project[] = parsed.map((item) =>
+        typeof item === "string" ? { name: item, idea: "" } : item
+      );
+      setProjects(normalized);
+
+      // write back migrated shape so everything is consistent
+      localStorage.setItem("projects", JSON.stringify(normalized));
     } catch {}
   }, []);
 
@@ -61,10 +70,13 @@ export default function Dashboard() {
       <ul className="mt-6 space-y-2">
         {projects.map((p, i) => (
           <li key={i} className="rounded border bg-gray-50 p-3">
+            {/* use backticks for the URL and render the project NAME, not the whole object */}
             <Link href={`/dashboard/${i}`} className="underline block">
               {p.name}
             </Link>
-            <p className="text-sm text-gray-600 line-clamp-2">{p.idea}</p>
+            {p.idea && (
+              <p className="text-sm text-gray-600 line-clamp-2">{p.idea}</p>
+            )}
           </li>
         ))}
       </ul>
