@@ -31,18 +31,6 @@ export default function ProjectDetailsPage() {
     } catch {}
   }, [idx]);
 
-  // Save project helper
-  function saveProject(updated: Project) {
-    try {
-      const raw = localStorage.getItem("projects");
-      const arr = raw ? (JSON.parse(raw) as Project[]) : [];
-      arr[idx] = updated;
-      localStorage.setItem("projects", JSON.stringify(arr));
-      setProject(updated);
-    } catch {}
-  }
-
-  // --- NEW DEPLOY FUNCTION ---
   async function deploySite() {
     try {
       const res = await fetch("/api/deploy", { method: "POST" });
@@ -93,15 +81,6 @@ export default function ProjectDetailsPage() {
       </section>
 
       <section className="flex flex-wrap gap-3">
-        {/* --- EXISTING BUTTONS --- */}
-        <Link
-          href="/dashboard"
-          className="rounded border px-4 py-2 font-semibold underline"
-        >
-          Back to Dashboard
-        </Link>
-
-        {/* --- NEW DEPLOY BUTTON --- */}
         <button
           onClick={deploySite}
           className="rounded bg-white text-black px-4 py-2 font-semibold"

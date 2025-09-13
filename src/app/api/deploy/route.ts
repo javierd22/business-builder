@@ -25,9 +25,10 @@ export async function POST() {
     }
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const detail = e instanceof Error ? e.message : String(e);
     return NextResponse.json(
-      { error: "Network error calling deploy hook", detail: String(e) },
+      { error: "Network error calling deploy hook", detail },
       { status: 500 }
     );
   }
