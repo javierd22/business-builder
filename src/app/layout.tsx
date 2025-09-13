@@ -11,18 +11,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        {/* Simple header */}
         <header className="border-b">
           <nav className="mx-auto max-w-5xl p-4 flex items-center gap-4">
-            <Link href="/" className="font-semibold">
-              Business Builder
-            </Link>
-            <Link href="/dashboard" className="underline">
-              Dashboard
-            </Link>
+            <Link href="/" className="font-semibold">Business Builder</Link>
+            <Link href="/dashboard" className="underline">Dashboard</Link>
           </nav>
         </header>
-
         {children}
       </body>
     </html>

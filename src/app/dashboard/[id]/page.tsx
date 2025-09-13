@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 
 type Project = {
   name: string;
@@ -99,7 +100,6 @@ export default function ProjectPage() {
     }
   }
 
-  // NEW: simple preview generator (mock “Build”)
   function generatePreview() {
     if (!project) return;
     setBusy("preview");
@@ -110,7 +110,6 @@ export default function ProjectPage() {
         previewUrl,
         stage: Math.max(project.stage ?? 0, 3),
       });
-      // optional: navigate straight to preview
       router.push(previewUrl);
     } finally {
       setBusy(null);
@@ -139,7 +138,7 @@ export default function ProjectPage() {
   if (!project) {
     return (
       <main className="mx-auto max-w-xl px-6 py-12">
-        <a href="/dashboard" className="underline">← Back to Dashboard</a>
+        <Link href="/dashboard" className="underline">← Back to Dashboard</Link>
         <p className="mt-6">Project not found.</p>
       </main>
     );
@@ -147,7 +146,7 @@ export default function ProjectPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12 space-y-6">
-      <a href="/dashboard" className="underline">← Back to Dashboard</a>
+      <Link href="/dashboard" className="underline">← Back to Dashboard</Link>
 
       <section>
         <h1 className="mt-4 text-2xl font-bold">Project Details</h1>
@@ -168,10 +167,8 @@ export default function ProjectPage() {
         <h2 className="font-semibold mb-3">Pipeline</h2>
         <ol className="flex flex-wrap gap-2">
           {STAGES.map((s, i) => (
-            <li
-              key={s}
-              className={`px-3 py-1 rounded border text-sm ${i <= currentStage ? "bg-white text-black" : "bg-transparent text-white"}`}
-            >
+            <li key={s}
+              className={`px-3 py-1 rounded border text-sm ${i <= currentStage ? "bg-white text-black" : "bg-transparent text-white"}`}>
               {i + 1}. {s}
             </li>
           ))}
@@ -179,54 +176,30 @@ export default function ProjectPage() {
       </section>
 
       <section className="flex flex-wrap gap-3">
-        <button
-          onClick={generatePRD}
-          disabled={busy === "prd"}
-          className="rounded bg-white text-black px-4 py-2 font-semibold disabled:bg-gray-400"
-        >
+        <button onClick={generatePRD} disabled={busy === "prd"} className="rounded bg-white text-black px-4 py-2 font-semibold disabled:bg-gray-400">
           {busy === "prd" ? "Generating PRD..." : "Generate PRD"}
         </button>
 
-        <button
-          onClick={() => exportDoc("PRD", project.prd)}
-          disabled={!project.prd}
-          className="rounded border px-4 py-2 font-semibold disabled:opacity-50"
-        >
+        <button onClick={() => exportDoc("PRD", project.prd)} disabled={!project.prd} className="rounded border px-4 py-2 font-semibold disabled:opacity-50">
           Export PRD (.md)
         </button>
 
-        <button
-          onClick={generateUX}
-          disabled={busy === "ux"}
-          className="rounded bg-white text-black px-4 py-2 font-semibold disabled:bg-gray-400"
-        >
+        <button onClick={generateUX} disabled={busy === "ux"} className="rounded bg-white text-black px-4 py-2 font-semibold disabled:bg-gray-400">
           {busy === "ux" ? "Generating UX..." : "Generate UX"}
         </button>
 
-        <button
-          onClick={() => exportDoc("UX", project.ux)}
-          disabled={!project.ux}
-          className="rounded border px-4 py-2 font-semibold disabled:opacity-50"
-        >
+        <button onClick={() => exportDoc("UX", project.ux)} disabled={!project.ux} className="rounded border px-4 py-2 font-semibold disabled:opacity-50">
           Export UX (.md)
         </button>
 
-        {/* NEW: Build/Preview */}
-        <button
-          onClick={generatePreview}
-          disabled={busy === "preview"}
-          className="rounded bg-white text-black px-4 py-2 font-semibold disabled:bg-gray-400"
-        >
+        <button onClick={generatePreview} disabled={busy === "preview"} className="rounded bg-white text-black px-4 py-2 font-semibold disabled:bg-gray-400">
           {busy === "preview" ? "Creating Preview..." : "Generate Preview"}
         </button>
 
         {project.previewUrl && (
-          <a
-            href={project.previewUrl}
-            className="rounded border px-4 py-2 font-semibold underline"
-          >
+          <Link href={project.previewUrl} className="rounded border px-4 py-2 font-semibold underline">
             Open Preview →
-          </a>
+          </Link>
         )}
       </section>
 

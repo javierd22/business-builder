@@ -43,9 +43,7 @@ export default function PreviewPage() {
       <header className="border-b">
         <div className="mx-auto max-w-5xl p-4 flex items-center justify-between">
           <div className="font-semibold">{project.name}</div>
-          <Link href="/dashboard" className="underline text-sm">
-            Back to App
-          </Link>
+          <Link href="/dashboard" className="underline text-sm">Back to App</Link>
         </div>
       </header>
 
@@ -54,12 +52,8 @@ export default function PreviewPage() {
         <p className="mt-4 text-lg text-gray-700">{tagline}</p>
 
         <div className="mt-8 flex gap-3">
-          <Link href="/dashboard" className="rounded bg-black text-white px-5 py-3 font-semibold">
-            Try It Free
-          </Link>
-          <a href="#" className="rounded border px-5 py-3 font-semibold">
-            Learn More
-          </a>
+          <Link href="/dashboard" className="rounded bg-black text-white px-5 py-3 font-semibold">Try It Free</Link>
+          <a href="#" className="rounded border px-5 py-3 font-semibold">Learn More</a>
         </div>
       </section>
 
