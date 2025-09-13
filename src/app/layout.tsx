@@ -1,23 +1,29 @@
-// DO NOT add "use client" here.
-import "./globals.css";
 import type { Metadata } from "next";
+import Link from "next/link";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Business Builder MVP",
-  description: "Turn ideas into products",
+  description: "Idea → PRD → UX → Preview",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-black text-white">
+      <body>
+        {/* Simple header */}
         <header className="border-b">
-          <nav className="mx-auto flex max-w-5xl items-center justify-between p-4">
-            <a href="/" className="font-semibold">🚀 Business Builder MVP</a>
-            <a href="/dashboard" className="underline">Dashboard</a>
+          <nav className="mx-auto max-w-5xl p-4 flex items-center gap-4">
+            <Link href="/" className="font-semibold">
+              Business Builder
+            </Link>
+            <Link href="/dashboard" className="underline">
+              Dashboard
+            </Link>
           </nav>
         </header>
-        <main className="mx-auto max-w-5xl p-4">{children}</main>
+
+        {children}
       </body>
     </html>
   );

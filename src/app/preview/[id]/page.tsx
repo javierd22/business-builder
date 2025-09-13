@@ -1,6 +1,7 @@
 "use client";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 type Project = {
   name: string;
@@ -42,9 +43,9 @@ export default function PreviewPage() {
       <header className="border-b">
         <div className="mx-auto max-w-5xl p-4 flex items-center justify-between">
           <div className="font-semibold">{project.name}</div>
-          <a href="/dashboard" className="underline text-sm">
+          <Link href="/dashboard" className="underline text-sm">
             Back to App
-          </a>
+          </Link>
         </div>
       </header>
 
@@ -53,9 +54,9 @@ export default function PreviewPage() {
         <p className="mt-4 text-lg text-gray-700">{tagline}</p>
 
         <div className="mt-8 flex gap-3">
-          <a href="/dashboard" className="rounded bg-black text-white px-5 py-3 font-semibold">
+          <Link href="/dashboard" className="rounded bg-black text-white px-5 py-3 font-semibold">
             Try It Free
-          </a>
+          </Link>
           <a href="#" className="rounded border px-5 py-3 font-semibold">
             Learn More
           </a>
