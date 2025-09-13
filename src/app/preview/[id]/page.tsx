@@ -43,7 +43,9 @@ export default function PreviewPage() {
       <header className="border-b">
         <div className="mx-auto max-w-5xl p-4 flex items-center justify-between">
           <div className="font-semibold">{project.name}</div>
-          <Link href="/dashboard" className="underline text-sm">Back to App</Link>
+          <Link href="/dashboard" className="underline text-sm">
+            Back to App
+          </Link>
         </div>
       </header>
 
@@ -52,8 +54,19 @@ export default function PreviewPage() {
         <p className="mt-4 text-lg text-gray-700">{tagline}</p>
 
         <div className="mt-8 flex gap-3">
-          <Link href="/dashboard" className="rounded bg-black text-white px-5 py-3 font-semibold">Try It Free</Link>
-          <a href="#" className="rounded border px-5 py-3 font-semibold">Learn More</a>
+          <Link
+            href="/dashboard"
+            className="rounded bg-black text-white px-5 py-3 font-semibold"
+          >
+            Try It Free
+          </Link>
+          {/* FIX: replaced <a> with Link */}
+          <Link
+            href="/dashboard"
+            className="rounded border px-5 py-3 font-semibold"
+          >
+            Learn More
+          </Link>
         </div>
       </section>
 
@@ -61,7 +74,9 @@ export default function PreviewPage() {
         <div className="mx-auto max-w-5xl px-4 py-12 grid gap-6 md:grid-cols-3">
           <div className="rounded border p-4">
             <div className="font-semibold">Benefit 1</div>
-            <p className="text-gray-700 mt-2">Describe a key outcome your app gives users.</p>
+            <p className="text-gray-700 mt-2">
+              Describe a key outcome your app gives users.
+            </p>
           </div>
           <div className="rounded border p-4">
             <div className="font-semibold">Benefit 2</div>
