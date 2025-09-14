@@ -1,37 +1,152 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type Project = {
   name: string;
   idea: string;
-  prd?: string;
-  ux?: string;
-  previewUrl?: string;
-  stage?: number;
+  prd?: string;          // markdown text
+  ux?: string;           // markdown text
+  previewUrl?: string;   // e.g. /preview/0
+  stage?: number;        // 0=Clarify, 1=PRD, 2=UX, 3=Build, 4=Launch
+  previewTemplate?: "classic" | "minimal" | "split" | "centered";
 };
 
-export default function ProjectDetailsPage() {
+const STAGES = ["Clarify", "PRD", "UX", "Build", "Launch"] as const;
+
+export default function ProjectPage() {
   const params = useParams();
+  const router = useRouter();
   const idParam = (params?.id as string) ?? "";
   const idx = Number(idParam);
 
   const [project, setProject] = useState<Project | null>(null);
+  const [busy, setBusy] = useState<"prd" | "ux" | "preview" | "deploy" | null>(null);
 
+  // Load the project from localStorage
   useEffect(() => {
     try {
       const raw = localStorage.getItem("projects");
       if (!raw) return;
       const arr = JSON.parse(raw) as Project[];
       if (!Number.isNaN(idx) && arr[idx]) {
-        setProject({ stage: 0, ...arr[idx] });
+        // default a template so preview works nicely
+        setProject({ previewTemplate: "classic", stage: 0, ...arr[idx] });
       }
-    } catch {}
+    } catch { /* ignore */ }
   }, [idx]);
 
+  // Save back to localStorage helper
+  function saveProject(updated: Project) {
+    try {
+      const raw = localStorage.getItem("projects");
+      const arr = raw ? (JSON.parse(raw) as Project[]) : [];
+      arr[idx] = updated;
+      localStorage.setItem("projects", JSON.stringify(arr));
+      setProject(updated);
+    } catch { /* ignore */ }
+  }
+
+  // --- Generate PRD (calls /api/plan) ---
+  async function generatePRD() {
+    if (!project) return;
+    setBusy("prd");
+    try {
+      const res = await fetch("/api/plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idea: project.idea }),
+      });
+      if (!res.ok) {
+        const t = await res.text();
+        alert(`PRD failed: ${res.status} ${res.statusText}\n${t}`);
+        return;
+      }
+      const data = (await res.json()) as { plan: string };
+      saveProject({
+        ...project,
+        prd: data.plan,
+        stage: Math.max(project.stage ?? 0, 1),
+      });
+    } catch (e) {
+      console.error(e);
+      alert("Failed to generate PRD.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  // --- Generate UX (calls /api/ux) ---
+  async function generateUX() {
+    if (!project) return;
+    setBusy("ux");
+    try {
+      const res = await fetch("/api/ux", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idea: project.idea }),
+      });
+      if (!res.ok) {
+        const t = await res.text();
+        alert(`UX failed: ${res.status} ${res.statusText}\n${t}`);
+        return;
+      }
+      const data = (await res.json()) as { ux: string };
+      saveProject({
+        ...project,
+        ux: data.ux,
+        stage: Math.max(project.stage ?? 0, 2),
+      });
+    } catch (e) {
+      console.error(e);
+      alert("Failed to generate UX.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  // --- Create Preview (just routes to /preview/[id]) ---
+  function generatePreview() {
+    if (!project) return;
+    setBusy("preview");
+    try {
+      const previewUrl = `/preview/${idx}`;
+      saveProject({
+        ...project,
+        previewUrl,
+        stage: Math.max(project.stage ?? 0, 3),
+      });
+      router.push(previewUrl);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  // --- Export helpers (download .md) ---
+  function exportDoc(label: "PRD" | "UX", content?: string) {
+    if (!content) return;
+    const slug = (project?.name || "project")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+    const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${slug}-${label}.md`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  // --- Deploy via /api/deploy (Vercel build hook proxy) ---
   async function deploySite() {
+    setBusy("deploy");
     try {
       const res = await fetch("/api/deploy", { method: "POST" });
       if (!res.ok) {
@@ -43,8 +158,12 @@ export default function ProjectDetailsPage() {
     } catch (e) {
       console.error(e);
       alert("Deploy request failed. See console.");
+    } finally {
+      setBusy(null);
     }
   }
+
+  const currentStage = useMemo(() => project?.stage ?? 0, [project]);
 
   if (!project) {
     return (
@@ -80,14 +199,107 @@ export default function ProjectDetailsPage() {
         <p className="mt-1 whitespace-pre-wrap">{project.idea}</p>
       </section>
 
+      {/* Pipeline indicator */}
+      <section className="rounded border p-4">
+        <h2 className="font-semibold mb-3">Pipeline</h2>
+        <ol className="flex flex-wrap gap-2">
+          {STAGES.map((s, i) => (
+            <li
+              key={s}
+              className={`px-3 py-1 rounded border text-sm ${
+                i <= currentStage
+                  ? "bg-white text-black"
+                  : "bg-transparent text-white"
+              }`}
+            >
+              {i + 1}. {s}
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      {/* Action buttons */}
       <section className="flex flex-wrap gap-3">
         <button
-          onClick={deploySite}
-          className="rounded bg-white text-black px-4 py-2 font-semibold"
+          onClick={generatePRD}
+          disabled={busy === "prd"}
+          className="rounded bg-white text-black px-4 py-2 font-semibold disabled:bg-gray-400"
         >
-          Deploy site
+          {busy === "prd" ? "Generating PRD..." : "Generate PRD"}
+        </button>
+
+        <button
+          onClick={() => exportDoc("PRD", project.prd)}
+          disabled={!project.prd}
+          className="rounded border px-4 py-2 font-semibold disabled:opacity-50"
+        >
+          Export PRD (.md)
+        </button>
+
+        <button
+          onClick={generateUX}
+          disabled={busy === "ux"}
+          className="rounded bg-white text-black px-4 py-2 font-semibold disabled:bg-gray-400"
+        >
+          {busy === "ux" ? "Generating UX..." : "Generate UX"}
+        </button>
+
+        <button
+          onClick={() => exportDoc("UX", project.ux)}
+          disabled={!project.ux}
+          className="rounded border px-4 py-2 font-semibold disabled:opacity-50"
+        >
+          Export UX (.md)
+        </button>
+
+        <button
+          onClick={generatePreview}
+          disabled={busy === "preview"}
+          className="rounded bg-white text-black px-4 py-2 font-semibold disabled:bg-gray-400"
+        >
+          {busy === "preview" ? "Creating Preview..." : "Generate Preview"}
+        </button>
+
+        {project.previewUrl && (
+          <Link
+            href={project.previewUrl}
+            className="rounded border px-4 py-2 font-semibold underline"
+          >
+            Open Preview →
+          </Link>
+        )}
+
+        <button
+          onClick={deploySite}
+          disabled={busy === "deploy"}
+          className="rounded bg-white text-black px-4 py-2 font-semibold disabled:bg-gray-400"
+        >
+          {busy === "deploy" ? "Deploying…" : "Deploy site"}
         </button>
       </section>
+
+      {/* Inline readers so you can sanity-check outputs */}
+      {project.prd && (
+        <section className="rounded border p-4 bg-white text-black">
+          <h2 className="font-semibold">PRD</h2>
+          <div className="mt-2 text-sm leading-6 [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-lg [&_*]:max-w-none [&_pre]:overflow-auto [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:py-0.5 [&_ul]:list-disc [&_ol]:list-decimal [&_li]:ml-5">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {project.prd}
+            </ReactMarkdown>
+          </div>
+        </section>
+      )}
+
+      {project.ux && (
+        <section className="rounded border p-4 bg-white text-black">
+          <h2 className="font-semibold">UX Spec</h2>
+          <div className="mt-2 text-sm leading-6 [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-lg [&_*]:max-w-none [&_pre]:overflow-auto [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:py-0.5 [&_ul]:list-disc [&_ol]:list-decimal [&_li]:ml-5">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {project.ux}
+            </ReactMarkdown>
+          </div>
+        </section>
+      )}
     </main>
   );
 }
