@@ -25,18 +25,18 @@ export default function IdeaBox() {
   }
 
   return (
-    <div className="mx-auto mt-10 max-w-3xl rounded-2xl border border-gray-200 bg-white/70 p-2 shadow-lg backdrop-blur">
+    <div className="mx-auto mt-10 max-w-3xl rounded-2xl border border-border bg-surface-glass p-2 shadow-soft backdrop-blur">
       <form onSubmit={onSubmit} className="relative" aria-label="Describe your business idea">
         <textarea
           value={idea}
           onChange={(e) => setIdea(e.target.value)}
           placeholder="What do you want to build?"
           rows={3}
-          className="w-full resize-y rounded-2xl border border-gray-300 bg-white p-4 pr-14 text-gray-900 shadow-sm placeholder:text-gray-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          className="w-full resize-y rounded-2xl border border-border bg-white p-4 pr-14 text-text shadow-sm placeholder:text-text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-blue"
         />
         <button
           type="submit"
-          className="absolute bottom-3 right-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#F59E0B] text-white shadow hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          className="absolute bottom-3 right-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-brand-orange text-text-onBrand shadow hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-blue"
           aria-label="Submit idea"
           title="Submit idea"
         >
@@ -44,15 +44,15 @@ export default function IdeaBox() {
         </button>
       </form>
 
-      <div className="mt-3 rounded-2xl bg-white/70 p-3">
-        <p className="mb-2 text-xs text-gray-600">Not sure where to start? Try one of these:</p>
+      <div className="mt-3 rounded-2xl bg-surface-glass p-3">
+        <p className="mb-2 text-xs text-text-muted">Not sure where to start? Try one of these:</p>
         <div className="flex flex-wrap gap-2">
           {suggestions.map((s) => (
             <button
               key={s}
               type="button"
               onClick={() => setIdea(s)}
-              className="rounded-full border border-gray-300 bg-white px-3 py-1 text-sm text-gray-700 shadow-sm transition-transform hover:-translate-y-0.5 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              className="rounded-full border border-border bg-white px-3 py-1 text-sm text-text shadow-sm transition-transform hover:-translate-y-0.5 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-blue"
             >
               {s}
             </button>
