@@ -1,5 +1,6 @@
 // src/app/page.tsx
 import Link from "next/link";
+import Image from "next/image";
 import IdeaBox from "./_components/IdeaBox";
 
 export const revalidate = 0;            // keep fresh while we debug deploys
@@ -43,7 +44,7 @@ export default function Page() {
       {/* Hero */}
       <section className="mx-auto max-w-5xl px-4 pb-24 pt-16 sm:px-6 lg:px-8 lg:pb-32 lg:pt-24">
         <h1 className="mx-auto text-center text-5xl font-black leading-tight tracking-tight text-gray-900 sm:text-6xl md:text-7xl">
-          Let's make your dream a <span className="text-[#A0D911]">reality</span>.
+          Let&apos;s make your dream a <span className="text-[#A0D911]">reality</span>.
           <br className="hidden sm:block" /> Right now.
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-center text-gray-700">
@@ -56,9 +57,9 @@ export default function Page() {
         {/* Trust bar */}
         <div className="mt-12 flex items-center justify-center gap-3 text-sm text-gray-600">
           <div className="flex -space-x-2">
-            <img alt="" src="https://i.pravatar.cc/36?img=1" className="h-7 w-7 rounded-full border-2 border-white" />
-            <img alt="" src="https://i.pravatar.cc/36?img=2" className="h-7 w-7 rounded-full border-2 border-white" />
-            <img alt="" src="https://i.pravatar.cc/36?img=3" className="h-7 w-7 rounded-full border-2 border-white" />
+            <Image alt="User avatar" src="https://i.pravatar.cc/36?img=1" width={28} height={28} className="h-7 w-7 rounded-full border-2 border-white" />
+            <Image alt="User avatar" src="https://i.pravatar.cc/36?img=2" width={28} height={28} className="h-7 w-7 rounded-full border-2 border-white" />
+            <Image alt="User avatar" src="https://i.pravatar.cc/36?img=3" width={28} height={28} className="h-7 w-7 rounded-full border-2 border-white" />
           </div>
           <span>Trusted by 400K+ users</span>
         </div>

@@ -13,7 +13,6 @@ export default function Error({
 }) {
   useEffect(() => {
     // Log for debugging (Vercel Functions / browser console in dev)
-    // eslint-disable-next-line no-console
     console.error(error);
   }, [error]);
 
