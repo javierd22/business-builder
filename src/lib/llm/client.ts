@@ -457,6 +457,12 @@ function generateMockUX(prd: string): string {
 function calculateAnthropicCost(usage: unknown, model: string): number {
   if (!usage) return 0;
   
+  // Type guard for usage object
+  const usageData = usage as Record<string, unknown>;
+  if (typeof usageData.input_tokens !== 'number' || typeof usageData.output_tokens !== 'number') {
+    return 0;
+  }
+  
   // Rough cost estimates (per 1M tokens)
   const costs = {
     'claude-3-5-sonnet-latest': { input: 3.00, output: 15.00 },
@@ -465,8 +471,8 @@ function calculateAnthropicCost(usage: unknown, model: string): number {
   };
   
   const modelCost = costs[model as keyof typeof costs] || costs['claude-3-5-sonnet-latest'];
-  const inputCost = (usage.input_tokens / 1000000) * modelCost.input;
-  const outputCost = (usage.output_tokens / 1000000) * modelCost.output;
+  const inputCost = (usageData.input_tokens / 1000000) * modelCost.input;
+  const outputCost = (usageData.output_tokens / 1000000) * modelCost.output;
   
   return inputCost + outputCost;
 }
@@ -477,6 +483,12 @@ function calculateAnthropicCost(usage: unknown, model: string): number {
 function calculateOpenAICost(usage: unknown, model: string): number {
   if (!usage) return 0;
   
+  // Type guard for usage object
+  const usageData = usage as Record<string, unknown>;
+  if (typeof usageData.prompt_tokens !== 'number' || typeof usageData.completion_tokens !== 'number') {
+    return 0;
+  }
+  
   // Rough cost estimates (per 1M tokens)
   const costs = {
     'gpt-4o-mini': { input: 0.15, output: 0.60 },
@@ -485,8 +497,8 @@ function calculateOpenAICost(usage: unknown, model: string): number {
   };
   
   const modelCost = costs[model as keyof typeof costs] || costs['gpt-4o-mini'];
-  const inputCost = (usage.prompt_tokens / 1000000) * modelCost.input;
-  const outputCost = (usage.completion_tokens / 1000000) * modelCost.output;
+  const inputCost = (usageData.prompt_tokens / 1000000) * modelCost.input;
+  const outputCost = (usageData.completion_tokens / 1000000) * modelCost.output;
   
   return inputCost + outputCost;
 }
