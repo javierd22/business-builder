@@ -112,7 +112,7 @@ async function fetchWithRetry(
 async function parseJsonResponse<T>(response: Response): Promise<T> {
   try {
     return await response.json();
-  } catch (error) {
+  } catch {
     throw new Error("Invalid JSON response from server");
   }
 }

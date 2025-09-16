@@ -67,7 +67,7 @@ export default function IdeaPage() {
 
   const handleRetry = () => {
     setError("");
-    handleSubmit(new Event("submit") as any);
+    handleSubmit({ preventDefault: () => {} } as React.FormEvent);
   };
 
   return (
@@ -82,7 +82,7 @@ export default function IdeaPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <Textarea
-                label="What's your business idea?"
+                label="What&apos;s your business idea?"
                 placeholder="Describe your business concept, target market, and what problem you're solving..."
                 value={idea}
                 onChange={(e) => setIdea(e.target.value)}
@@ -146,7 +146,7 @@ export default function IdeaPage() {
               </h3>
               <ul className="text-sm text-[#6B7280] space-y-1">
                 <li>• Be specific about your target audience</li>
-                <li>• Describe the problem you're solving</li>
+                <li>• Describe the problem you&apos;re solving</li>
                 <li>• Mention your unique value proposition</li>
                 <li>• Include any business model ideas</li>
               </ul>

@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/app/_components/ui/Card";
 import { Button } from "@/app/_components/ui/Button";
 import { Textarea } from "@/app/_components/ui/Textarea";

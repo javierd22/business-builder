@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/app/_components/ui/Card";
 import { Button } from "@/app/_components/ui/Button";
 import { getProject, updateProject } from "@/lib/storage";
@@ -177,7 +176,7 @@ export default function UXPreviewPage() {
                   Ready to Deploy?
                 </h4>
                 <p className="text-sm text-blue-800">
-                  Your UX design is complete! Click "Deploy App" to make your business application live on the web.
+                  Your UX design is complete! Click &quot;Deploy App&quot; to make your business application live on the web.
                 </p>
               </div>
             </div>

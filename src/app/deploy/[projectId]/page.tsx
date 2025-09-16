@@ -84,7 +84,7 @@ export default function DeployPage() {
             </CardHeader>
             <CardContent className="text-center space-y-4">
               <p className="text-[#6B7280]">
-                This project doesn't exist or has been deleted.
+                This project doesn&apos;t exist or has been deleted.
               </p>
               <Button href="/idea" variant="primary">
                 Start New Project
@@ -213,7 +213,7 @@ export default function DeployPage() {
                     Deployment Status Unavailable
                   </h2>
                   <p className="text-[#6B7280]">
-                    We couldn't determine the current deployment status for this project.
+                    We couldn&apos;t determine the current deployment status for this project.
                   </p>
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                     <p className="text-sm text-yellow-800">
