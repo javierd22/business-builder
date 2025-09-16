@@ -177,7 +177,7 @@ export default function PricingPage() {
                 </ul>
 
                 <Button
-                  onClick={() => handleCtaClick(tier.id, tier.cta)}
+                  onClick={() => handleCtaClick(tier.id)}
                   disabled={isLoading}
                   className={`w-full ${
                     tier.ctaVariant === 'primary'
