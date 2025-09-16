@@ -128,7 +128,7 @@ async function fetchWithRetry(
 
   // All retries failed
   if (lastError instanceof Response) {
-    const errorText = await lastError.text().catch(() => "Unknown error");
+    await lastError.text().catch(() => "Unknown error");
     throw new Error(`Service temporarily unavailable. Please try again in a few minutes.`);
   }
 
@@ -138,7 +138,7 @@ async function fetchWithRetry(
 /**
  * Parse response with tolerant fallbacks
  */
-async function parseResponse(response: Response): Promise<any> {
+async function parseResponse(response: Response): Promise<unknown> {
   const text = await response.text();
   
   if (!text.trim()) {
@@ -157,7 +157,7 @@ async function parseResponse(response: Response): Promise<any> {
 /**
  * Extract PRD content from various response shapes
  */
-function extractPRDContent(data: any): string {
+function extractPRDContent(data: unknown): string {
   if (!data) {
     throw new NoPlanContentError();
   }
@@ -170,29 +170,47 @@ function extractPRDContent(data: any): string {
   }
 
   // Standard format: { prd: string }
-  if (data.prd && typeof data.prd === "string") {
-    return data.prd.trim();
+  if (typeof data === "object" && data !== null && "prd" in data) {
+    const record = data as Record<string, unknown>;
+    if (record.prd && typeof record.prd === "string") {
+      return record.prd.trim();
+    }
   }
 
   // Alternative format: { data: { prd: string } }
-  if (data.data?.prd && typeof data.data.prd === "string") {
-    return data.data.prd.trim();
+  if (typeof data === "object" && data !== null && "data" in data) {
+    const record = data as Record<string, unknown>;
+    if (typeof record.data === "object" && record.data !== null && "prd" in record.data) {
+      const nestedRecord = record.data as Record<string, unknown>;
+      if (nestedRecord.prd && typeof nestedRecord.prd === "string") {
+        return nestedRecord.prd.trim();
+      }
+    }
   }
 
   // OpenAI-like format: { choices: [{ message: { content: string } }] }
-  if (data.choices && Array.isArray(data.choices) && data.choices[0]) {
-    const choice = data.choices[0];
-    if (choice.message?.content) {
-      return choice.message.content.trim();
-    }
-    if (choice.text) {
-      return choice.text.trim();
+  if (typeof data === "object" && data !== null && "choices" in data) {
+    const record = data as Record<string, unknown>;
+    if (Array.isArray(record.choices) && record.choices[0]) {
+      const choice = record.choices[0] as Record<string, unknown>;
+      if (typeof choice.message === "object" && choice.message !== null) {
+        const message = choice.message as Record<string, unknown>;
+        if (message.content && typeof message.content === "string") {
+          return message.content.trim();
+        }
+      }
+      if (choice.text && typeof choice.text === "string") {
+        return choice.text.trim();
+      }
     }
   }
 
   // Generic content field
-  if (data.content && typeof data.content === "string") {
-    return data.content.trim();
+  if (typeof data === "object" && data !== null && "content" in data) {
+    const record = data as Record<string, unknown>;
+    if (record.content && typeof record.content === "string") {
+      return record.content.trim();
+    }
   }
 
   throw new NoPlanContentError();
@@ -201,7 +219,7 @@ function extractPRDContent(data: any): string {
 /**
  * Extract UX content from various response shapes
  */
-function extractUXContent(data: any): string {
+function extractUXContent(data: unknown): string {
   if (!data) {
     throw new NoUXContentError();
   }
@@ -214,29 +232,47 @@ function extractUXContent(data: any): string {
   }
 
   // Standard format: { ux: string }
-  if (data.ux && typeof data.ux === "string") {
-    return data.ux.trim();
+  if (typeof data === "object" && data !== null && "ux" in data) {
+    const record = data as Record<string, unknown>;
+    if (record.ux && typeof record.ux === "string") {
+      return record.ux.trim();
+    }
   }
 
   // Alternative format: { data: { ux: string } }
-  if (data.data?.ux && typeof data.data.ux === "string") {
-    return data.data.ux.trim();
+  if (typeof data === "object" && data !== null && "data" in data) {
+    const record = data as Record<string, unknown>;
+    if (typeof record.data === "object" && record.data !== null && "ux" in record.data) {
+      const nestedRecord = record.data as Record<string, unknown>;
+      if (nestedRecord.ux && typeof nestedRecord.ux === "string") {
+        return nestedRecord.ux.trim();
+      }
+    }
   }
 
   // OpenAI-like format: { choices: [{ message: { content: string } }] }
-  if (data.choices && Array.isArray(data.choices) && data.choices[0]) {
-    const choice = data.choices[0];
-    if (choice.message?.content) {
-      return choice.message.content.trim();
-    }
-    if (choice.text) {
-      return choice.text.trim();
+  if (typeof data === "object" && data !== null && "choices" in data) {
+    const record = data as Record<string, unknown>;
+    if (Array.isArray(record.choices) && record.choices[0]) {
+      const choice = record.choices[0] as Record<string, unknown>;
+      if (typeof choice.message === "object" && choice.message !== null) {
+        const message = choice.message as Record<string, unknown>;
+        if (message.content && typeof message.content === "string") {
+          return message.content.trim();
+        }
+      }
+      if (choice.text && typeof choice.text === "string") {
+        return choice.text.trim();
+      }
     }
   }
 
   // Generic content field
-  if (data.content && typeof data.content === "string") {
-    return data.content.trim();
+  if (typeof data === "object" && data !== null && "content" in data) {
+    const record = data as Record<string, unknown>;
+    if (record.content && typeof record.content === "string") {
+      return record.content.trim();
+    }
   }
 
   throw new NoUXContentError();
@@ -245,7 +281,7 @@ function extractUXContent(data: any): string {
 /**
  * Extract deployment info from various response shapes
  */
-function extractDeploymentInfo(data: any): { url?: string; status: "deploying" | "completed" | "failed" } {
+function extractDeploymentInfo(data: unknown): { url?: string; status: "deploying" | "completed" | "failed" } {
   if (!data) {
     throw new NoDeploymentDataError();
   }
@@ -260,15 +296,23 @@ function extractDeploymentInfo(data: any): { url?: string; status: "deploying" |
       url = content;
       status = "completed";
     }
-  } else {
+  } else if (typeof data === "object" && data !== null) {
+    const record = data as Record<string, unknown>;
+    
     // Extract URL from various formats
-    url = data.url || data.data?.url || data.deployment_url || data.deploymentUrl;
+    url = (record.url as string) || 
+          (typeof record.data === "object" && record.data !== null ? (record.data as Record<string, unknown>).url as string : undefined) ||
+          (record.deployment_url as string) || 
+          (record.deploymentUrl as string);
     
     // Extract status
-    if (data.status) {
-      status = data.status;
-    } else if (data.data?.status) {
-      status = data.data.status;
+    if (typeof record.status === "string" && (record.status === "deploying" || record.status === "completed" || record.status === "failed")) {
+      status = record.status;
+    } else if (typeof record.data === "object" && record.data !== null) {
+      const nestedRecord = record.data as Record<string, unknown>;
+      if (typeof nestedRecord.status === "string" && (nestedRecord.status === "deploying" || nestedRecord.status === "completed" || nestedRecord.status === "failed")) {
+        status = nestedRecord.status;
+      }
     } else if (url) {
       status = "completed";
     }
