@@ -109,6 +109,7 @@ async function fetchWithRetry(
 /**
  * Parse API response with tolerant error handling
  */
+/*
 async function parseResponse(response: Response): Promise<unknown> {
   const contentType = response.headers.get("content-type");
   
@@ -134,6 +135,7 @@ async function parseResponse(response: Response): Promise<unknown> {
     return { content: text };
   }
 }
+*/
 
 /**
  * Extract PRD content from various response formats

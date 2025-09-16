@@ -2,7 +2,6 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 
 export interface FlowStep {
   id: string;
@@ -129,22 +128,10 @@ export default function FlowSteps({ currentStep, projectId }: FlowStepsProps) {
                       </Link>
                     ) : (
                       <div>
-                        <span className={`text-sm font-medium ${
-                          status === "completed" 
-                            ? "text-[#8B7355]" 
-                            : status === "current" 
-                            ? "text-[#4A5568]" 
-                            : "text-[#6B7280]"
-                        }`}>
+                        <span className="text-sm font-medium text-[#6B7280]">
                           {step.title}
                         </span>
-                        <p className={`text-xs ${
-                          status === "completed" 
-                            ? "text-[#8B7355]" 
-                            : status === "current" 
-                            ? "text-[#6B7280]" 
-                            : "text-[#9CA3AF]"
-                        }`}>
+                        <p className="text-xs text-[#9CA3AF]">
                           {step.description}
                         </p>
                       </div>
