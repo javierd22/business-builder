@@ -276,11 +276,12 @@ export function validateProjectJSON(jsonData: unknown): { valid: boolean; projec
     }
 
     // Validate field types
-    if (typeof (jsonData as any).id !== 'string' || 
-        typeof (jsonData as any).idea !== 'string' || 
-        typeof (jsonData as any).status !== 'string' ||
-        typeof (jsonData as any).createdAt !== 'string' ||
-        typeof (jsonData as any).updatedAt !== 'string') {
+    const data = jsonData as Record<string, unknown>;
+    if (typeof data.id !== 'string' || 
+        typeof data.idea !== 'string' || 
+        typeof data.status !== 'string' ||
+        typeof data.createdAt !== 'string' ||
+        typeof data.updatedAt !== 'string') {
       return { 
         valid: false, 
         error: 'Invalid field types in project data' 
@@ -289,24 +290,24 @@ export function validateProjectJSON(jsonData: unknown): { valid: boolean; projec
 
     // Validate status enum
     const validStatuses = ['draft', 'planning', 'ux_design', 'deploying', 'completed', 'failed'];
-    if (!validStatuses.includes((jsonData as any).status)) {
+    if (!validStatuses.includes(data.status)) {
       return { 
         valid: false, 
-        error: `Invalid status value: ${(jsonData as any).status}` 
+        error: `Invalid status value: ${data.status}` 
       };
     }
 
     // Create clean project object
     const project: Project = {
-      id: jsonData.id,
-      idea: jsonData.idea,
-      prd: jsonData.prd || undefined,
-      ux: jsonData.ux || undefined,
-      deploymentLink: jsonData.deploymentLink || undefined,
-      status: jsonData.status,
-      createdAt: jsonData.createdAt,
-      updatedAt: jsonData.updatedAt,
-      llm: jsonData.llm || undefined,
+      id: data.id,
+      idea: data.idea,
+      prd: data.prd as string || undefined,
+      ux: data.ux as string || undefined,
+      deploymentLink: data.deploymentLink as string || undefined,
+      status: data.status,
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+      llm: data.llm as Record<string, unknown> || undefined,
     };
 
     return { valid: true, project };
