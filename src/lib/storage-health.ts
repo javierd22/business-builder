@@ -84,13 +84,13 @@ export function healthStatus(): 'ok' | 'warning' | 'critical' {
  */
 export function getStorageHealth(): StorageHealth {
   const usageBytes = estimateUsageBytes();
-  const quotaBytes = quotaBytes();
-  const usageRatio = usageBytes / quotaBytes;
+  const quotaBytesValue = quotaBytes();
+  const usageRatio = usageBytes / quotaBytesValue;
   const status = healthStatus();
   
   return {
     usageBytes,
-    quotaBytes,
+    quotaBytes: quotaBytesValue,
     usageRatio,
     status
   };
