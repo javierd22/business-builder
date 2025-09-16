@@ -24,18 +24,18 @@ export default function IdeaBox() {
   }
 
   return (
-    <div className="mx-auto mt-10 max-w-3xl rounded-2xl border border-[#E5E9EF] bg-white/80 p-2 shadow-[0_10px_30px_rgba(2,6,23,0.08)] backdrop-blur">
+    <div className="mx-auto mt-10 max-w-3xl rounded-2xl border-2 border-[#C0C4CC] bg-white/95 p-3 shadow-[0_20px_40px_rgba(0,0,0,0.1)] backdrop-blur">
       <form onSubmit={onSubmit} className="relative" aria-label="Describe your business idea">
         <textarea
           value={idea}
           onChange={(e) => setIdea(e.target.value)}
           placeholder="What do you want to build?"
           rows={3}
-          className="w-full resize-y rounded-2xl border border-[#E5E9EF] bg-white p-4 pr-14 text-[#1F2937] shadow-sm placeholder:text-[#6B7280] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]"
+          className="w-full resize-y rounded-xl border-2 border-[#C0C4CC] bg-white p-4 pr-14 text-[#2D1B02] shadow-inner placeholder:text-[#8B7355] focus:outline-none focus:border-[#FFD700] focus-visible:ring-2 focus-visible:ring-[#FFD700] transition-all"
         />
         <button
           type="submit"
-          className="absolute bottom-3 right-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#D4AF37] text-[#1F2937] shadow hover:bg-[#B4891E] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]"
+          className="absolute bottom-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r from-[#FFD700] via-[#FFA500] to-[#FF8C00] text-[#2D1B02] shadow-lg hover:from-[#FFED4E] hover:via-[#FFD700] hover:to-[#FFA500] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FFD700] transition-all transform hover:scale-110 font-bold text-lg"
           aria-label="Submit idea"
           title="Submit idea"
         >
@@ -43,15 +43,15 @@ export default function IdeaBox() {
         </button>
       </form>
 
-      <div className="mt-3 rounded-2xl bg-white/70 p-3">
-        <p className="mb-2 text-xs text-[#6B7280]">Not sure where to start? Try one of these:</p>
+      <div className="mt-3 rounded-xl bg-gradient-to-br from-[#F8F9FA] to-[#E9ECEF] p-3 border border-[#C0C4CC]">
+        <p className="mb-2 text-xs text-[#5D4E37] font-medium">Not sure where to start? Try one of these:</p>
         <div className="flex flex-wrap gap-2">
           {suggestions.map((s) => (
             <button
               key={s}
               type="button"
               onClick={() => setIdea(s)}
-              className="rounded-full border border-[#E5E9EF] bg-white px-3 py-1 text-sm text-[#1F2937] shadow-sm transition-transform hover:-translate-y-0.5 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]"
+              className="rounded-full border border-[#C0C4CC] bg-gradient-to-br from-white to-[#F8F9FA] px-3 py-1 text-sm text-[#2D1B02] shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-[#FFD700] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FFD700] font-medium"
             >
               {s}
             </button>
