@@ -3,21 +3,34 @@ import { Card, CardContent } from "@/app/_components/ui/Card";
 
 export default function Loading() {
   return (
-    <div className="min-h-screen bg-[#F4EDE2] flex items-center justify-center p-4">
-      <Card>
-        <CardContent>
-          <div 
-            className="flex items-center justify-center py-12"
-            role="status" 
-            aria-live="polite"
-          >
-            <div className="text-center">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#D4AF37] border-t-transparent mx-auto mb-4" />
-              <p className="text-[#6B7280]">Loading...</p>
+    <div className="min-h-screen bg-brand-beige py-12">
+      <div className="mx-auto max-w-4xl px-4">
+        <Card>
+          <CardContent>
+            <div className="animate-pulse space-y-6">
+              {/* Header skeleton */}
+              <div className="space-y-3">
+                <div className="h-8 bg-metal-silverLight rounded-xl w-1/3" />
+                <div className="h-4 bg-metal-silverLight rounded-lg w-2/3" />
+              </div>
+
+              {/* Content skeleton */}
+              <div className="space-y-4">
+                <div className="h-4 bg-metal-silverLight rounded-lg w-full" />
+                <div className="h-4 bg-metal-silverLight rounded-lg w-5/6" />
+                <div className="h-4 bg-metal-silverLight rounded-lg w-4/6" />
+                <div className="h-4 bg-metal-silverLight rounded-lg w-3/4" />
+              </div>
+
+              {/* Large content block */}
+              <div className="h-64 bg-metal-silverLight rounded-xl" />
+
+              {/* Button skeleton */}
+              <div className="h-12 bg-metal-silverLight rounded-xl w-1/4" />
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

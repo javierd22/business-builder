@@ -1,5 +1,4 @@
 import React from "react";
-import { cn } from "@/lib/utils";
 
 interface CardProps {
   children: React.ReactNode;
@@ -13,8 +12,8 @@ interface CardHeaderProps {
 
 interface CardTitleProps {
   children: React.ReactNode;
-  className?: string;
   as?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+  className?: string;
 }
 
 interface CardDescriptionProps {
@@ -34,12 +33,7 @@ interface CardFooterProps {
 
 export function Card({ children, className = "" }: CardProps) {
   return (
-    <div
-      className={cn(
-        "bg-white border border-[#E5E9EF] rounded-xl shadow-sm p-6",
-        className
-      )}
-    >
+    <div className={`bg-white border border-metal-silverLight rounded-2xl shadow-soft p-6 ${className}`}>
       {children}
     </div>
   );
@@ -47,32 +41,23 @@ export function Card({ children, className = "" }: CardProps) {
 
 export function CardHeader({ children, className = "" }: CardHeaderProps) {
   return (
-    <div className={cn("mb-4", className)}>
+    <div className={`mb-6 ${className}`}>
       {children}
     </div>
   );
 }
 
-export function CardTitle({ 
-  children, 
-  className = "", 
-  as: Component = "h3" 
-}: CardTitleProps) {
+export function CardTitle({ children, as: Component = "h2", className = "" }: CardTitleProps) {
   return (
-    <Component 
-      className={cn("text-lg font-semibold text-[#1F2937]", className)}
-    >
+    <Component className={`text-xl font-bold text-text-DEFAULT ${className}`}>
       {children}
     </Component>
   );
 }
 
-export function CardDescription({ 
-  children, 
-  className = "" 
-}: CardDescriptionProps) {
+export function CardDescription({ children, className = "" }: CardDescriptionProps) {
   return (
-    <p className={cn("text-sm text-[#6B7280] mt-1", className)}>
+    <p className={`text-text-muted mt-2 ${className}`}>
       {children}
     </p>
   );
@@ -80,7 +65,7 @@ export function CardDescription({
 
 export function CardContent({ children, className = "" }: CardContentProps) {
   return (
-    <div className={cn("", className)}>
+    <div className={className}>
       {children}
     </div>
   );
@@ -88,7 +73,7 @@ export function CardContent({ children, className = "" }: CardContentProps) {
 
 export function CardFooter({ children, className = "" }: CardFooterProps) {
   return (
-    <div className={cn("mt-4 pt-4 border-t border-[#E5E9EF]", className)}>
+    <div className={`mt-6 pt-6 border-t border-metal-silverLight ${className}`}>
       {children}
     </div>
   );

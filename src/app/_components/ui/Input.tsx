@@ -1,52 +1,56 @@
 import React from "react";
-import { cn } from "@/lib/utils";
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
-  error?: string;
   helpText?: string;
+  error?: string;
+  className?: string;
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, helpText, className = "", type = "text", ...props }, ref) => {
-    const id = props.id || `input-${Math.random().toString(36).slice(2, 9)}`;
+  ({ label, helpText, error, className = "", ...props }, ref) => {
+    const inputId = React.useId();
+    const helpId = React.useId();
+    const errorId = React.useId();
+
+    const inputClasses = `
+      w-full px-4 py-3 rounded-xl border transition-all duration-200
+      bg-white placeholder:text-text-muted text-text-DEFAULT
+      focus:outline-none focus:ring-2 focus:ring-ring-gold focus:border-ring-gold
+      disabled:opacity-50 disabled:cursor-not-allowed
+      ${error 
+        ? "border-red-300 focus:border-red-500 focus:ring-red-500" 
+        : "border-metal-silverLight"
+      }
+      ${className}
+    `.trim();
 
     return (
-      <div className="space-y-1">
+      <div className="space-y-2">
         {label && (
-          <label 
-            htmlFor={id}
-            className="block text-sm font-medium text-[#1F2937]"
-          >
+          <label htmlFor={inputId} className="block text-sm font-medium text-text-DEFAULT">
             {label}
           </label>
         )}
+        
         <input
           ref={ref}
-          type={type}
-          id={id}
-          className={cn(
-            "w-full px-3 py-2 border border-[#E5E9EF] rounded-lg shadow-sm",
-            "bg-white text-[#1F2937] placeholder:text-[#6B7280]",
-            "focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-[#D4AF37]",
-            "disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-[#F4EDE2]",
-            error && "border-red-300 focus:ring-red-500 focus:border-red-500",
-            className
-          )}
+          id={inputId}
+          className={inputClasses}
+          aria-describedby={helpText ? helpId : error ? errorId : undefined}
           aria-invalid={error ? "true" : "false"}
-          aria-describedby={
-            error ? `${id}-error` : helpText ? `${id}-help` : undefined
-          }
           {...props}
         />
-        {error && (
-          <p id={`${id}-error`} className="text-sm text-red-600" role="alert">
-            {error}
+        
+        {helpText && !error && (
+          <p id={helpId} className="text-sm text-text-muted">
+            {helpText}
           </p>
         )}
-        {helpText && !error && (
-          <p id={`${id}-help`} className="text-sm text-[#6B7280]">
-            {helpText}
+        
+        {error && (
+          <p id={errorId} className="text-sm text-red-600" role="alert">
+            {error}
           </p>
         )}
       </div>

@@ -1,23 +1,14 @@
 import { NextResponse } from "next/server";
 
-/**
- * Generate an ID for logging
- */
 function generateRequestId(): string {
   return Math.random().toString(36).substring(2, 15);
 }
 
-/**
- * Log server-side errors with request ID
- */
 function logError(requestId: string, error: unknown, context: string) {
   const timestamp = new Date().toISOString();
   console.error(`[${timestamp}] [${requestId}] ${context}:`, error instanceof Error ? error.message : error);
 }
 
-/**
- * Generate a mock deployment URL for demo purposes
- */
 function generateMockDeploymentUrl(projectId: string): string {
   const randomId = Math.random().toString(36).substring(2, 8);
   return `https://business-builder-${projectId}-${randomId}.vercel.app`;
@@ -28,6 +19,8 @@ export async function GET() {
     ok: true, 
     expects: "POST { projectId: string }",
     returns: "{ url?: string, status: 'deploying' | 'completed' | 'failed' }"
+  }, {
+    headers: { "Content-Type": "application/json" }
   });
 }
 
@@ -52,11 +45,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check for Vercel deploy hook URL
     const hookUrl = process.env.NEXT_PUBLIC_VERCEL_DEPLOY_HOOK_URL;
 
     if (!hookUrl) {
-      // If no deploy hook is configured, return a mock deployment for demo purposes
       console.log(`[${timestamp}] [${requestId}] No deploy hook configured, returning mock deployment`);
       
       const mockUrl = generateMockDeploymentUrl(projectId);
@@ -71,7 +62,6 @@ export async function POST(req: Request) {
     }
 
     try {
-      // Attempt to trigger actual deployment
       const deployResponse = await fetch(hookUrl, { 
         method: "POST",
         headers: {
@@ -96,16 +86,13 @@ export async function POST(req: Request) {
         );
       }
 
-      // Parse the response from Vercel
       let deployData;
       try {
         deployData = await deployResponse.json();
       } catch {
-        // If we can't parse JSON, assume success and return deploying status
         deployData = null;
       }
 
-      // Extract URL from Vercel response if available
       const deploymentUrl = deployData?.url || deployData?.deployment?.url;
       
       console.log(`[${timestamp}] [${requestId}] Deployment triggered successfully`);

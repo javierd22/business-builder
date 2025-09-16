@@ -1,5 +1,5 @@
 /**
- * Robust API client with tolerant parsing, friendly errors, and mock mode
+ * Robust API client with tolerant parsing, exponential backoff retry, and mock mode
  */
 
 interface RetryOptions {
@@ -10,31 +10,9 @@ interface RetryOptions {
 
 const DEFAULT_RETRY_OPTIONS: RetryOptions = {
   maxRetries: 3,
-  baseDelay: 1000, // 1 second
-  maxDelay: 10000, // 10 seconds
+  baseDelay: 1000,
+  maxDelay: 10000,
 };
-
-// Custom error types
-class NoPlanContentError extends Error {
-  constructor() {
-    super("The service returned an empty response. Please try again or check your input.");
-    this.name = "NoPlanContentError";
-  }
-}
-
-class NoUXContentError extends Error {
-  constructor() {
-    super("The UX generation service didn't return any content. Please try again.");
-    this.name = "NoUXContentError";
-  }
-}
-
-class NoDeploymentDataError extends Error {
-  constructor() {
-    super("The deployment service didn't return deployment information. Please try again.");
-    this.name = "NoDeploymentDataError";
-  }
-}
 
 /**
  * Check if we're in mock mode
@@ -100,7 +78,6 @@ async function fetchWithRetry(
         ...options,
       });
 
-      // Don't retry on 4xx errors (except 429)
       if (!response.ok && !shouldRetry(response, attempt, retryOptions.maxRetries)) {
         throw new Error(`Request failed: ${response.status} ${response.statusText}`);
       }
@@ -113,26 +90,23 @@ async function fetchWithRetry(
     } catch (error) {
       lastError = error;
 
-      // Don't retry if we shouldn't
       if (!shouldRetry(error, attempt, retryOptions.maxRetries)) {
         break;
       }
     }
 
-    // Wait before retrying (but not after the last attempt)
     if (attempt < retryOptions.maxRetries) {
       const delay = calculateDelay(attempt, retryOptions.baseDelay, retryOptions.maxDelay);
       await sleep(delay);
     }
   }
 
-  // All retries failed
   if (lastError instanceof Response) {
     await lastError.text().catch(() => "Unknown error");
-    throw new Error(`Service temporarily unavailable. Please try again in a few minutes.`);
+    throw new Error("Service temporarily unavailable. Please try again in a few minutes.");
   }
 
-  throw new Error(`Network error. Please check your connection and try again.`);
+  throw new Error("Network error. Please check your connection and try again.");
 }
 
 /**
@@ -145,11 +119,9 @@ async function parseResponse(response: Response): Promise<unknown> {
     return null;
   }
 
-  // Try to parse as JSON first
   try {
     return JSON.parse(text);
   } catch {
-    // If not JSON, return as plain text
     return text;
   }
 }
@@ -159,38 +131,32 @@ async function parseResponse(response: Response): Promise<unknown> {
  */
 function extractPRDContent(data: unknown): string {
   if (!data) {
-    throw new NoPlanContentError();
+    throw new Error("The service returned no content.");
   }
 
-  // Direct string response
   if (typeof data === "string") {
     const content = data.trim();
     if (content) return content;
-    throw new NoPlanContentError();
+    throw new Error("The service returned no content.");
   }
 
-  // Standard format: { prd: string }
-  if (typeof data === "object" && data !== null && "prd" in data) {
+  if (typeof data === "object" && data !== null) {
     const record = data as Record<string, unknown>;
+    
+    // Standard format: { prd: string }
     if (record.prd && typeof record.prd === "string") {
       return record.prd.trim();
     }
-  }
 
-  // Alternative format: { data: { prd: string } }
-  if (typeof data === "object" && data !== null && "data" in data) {
-    const record = data as Record<string, unknown>;
-    if (typeof record.data === "object" && record.data !== null && "prd" in record.data) {
+    // Alternative format: { data: { prd: string } }
+    if (typeof record.data === "object" && record.data !== null) {
       const nestedRecord = record.data as Record<string, unknown>;
       if (nestedRecord.prd && typeof nestedRecord.prd === "string") {
         return nestedRecord.prd.trim();
       }
     }
-  }
 
-  // OpenAI-like format: { choices: [{ message: { content: string } }] }
-  if (typeof data === "object" && data !== null && "choices" in data) {
-    const record = data as Record<string, unknown>;
+    // OpenAI-like format
     if (Array.isArray(record.choices) && record.choices[0]) {
       const choice = record.choices[0] as Record<string, unknown>;
       if (typeof choice.message === "object" && choice.message !== null) {
@@ -205,15 +171,7 @@ function extractPRDContent(data: unknown): string {
     }
   }
 
-  // Generic content field
-  if (typeof data === "object" && data !== null && "content" in data) {
-    const record = data as Record<string, unknown>;
-    if (record.content && typeof record.content === "string") {
-      return record.content.trim();
-    }
-  }
-
-  throw new NoPlanContentError();
+  throw new Error("The service returned no content.");
 }
 
 /**
@@ -221,38 +179,32 @@ function extractPRDContent(data: unknown): string {
  */
 function extractUXContent(data: unknown): string {
   if (!data) {
-    throw new NoUXContentError();
+    throw new Error("The service returned no content.");
   }
 
-  // Direct string response
   if (typeof data === "string") {
     const content = data.trim();
     if (content) return content;
-    throw new NoUXContentError();
+    throw new Error("The service returned no content.");
   }
 
-  // Standard format: { ux: string }
-  if (typeof data === "object" && data !== null && "ux" in data) {
+  if (typeof data === "object" && data !== null) {
     const record = data as Record<string, unknown>;
+    
+    // Standard format: { ux: string }
     if (record.ux && typeof record.ux === "string") {
       return record.ux.trim();
     }
-  }
 
-  // Alternative format: { data: { ux: string } }
-  if (typeof data === "object" && data !== null && "data" in data) {
-    const record = data as Record<string, unknown>;
-    if (typeof record.data === "object" && record.data !== null && "ux" in record.data) {
+    // Alternative format: { data: { ux: string } }
+    if (typeof record.data === "object" && record.data !== null) {
       const nestedRecord = record.data as Record<string, unknown>;
       if (nestedRecord.ux && typeof nestedRecord.ux === "string") {
         return nestedRecord.ux.trim();
       }
     }
-  }
 
-  // OpenAI-like format: { choices: [{ message: { content: string } }] }
-  if (typeof data === "object" && data !== null && "choices" in data) {
-    const record = data as Record<string, unknown>;
+    // OpenAI-like format
     if (Array.isArray(record.choices) && record.choices[0]) {
       const choice = record.choices[0] as Record<string, unknown>;
       if (typeof choice.message === "object" && choice.message !== null) {
@@ -267,15 +219,7 @@ function extractUXContent(data: unknown): string {
     }
   }
 
-  // Generic content field
-  if (typeof data === "object" && data !== null && "content" in data) {
-    const record = data as Record<string, unknown>;
-    if (record.content && typeof record.content === "string") {
-      return record.content.trim();
-    }
-  }
-
-  throw new NoUXContentError();
+  throw new Error("The service returned no content.");
 }
 
 /**
@@ -283,13 +227,12 @@ function extractUXContent(data: unknown): string {
  */
 function extractDeploymentInfo(data: unknown): { url?: string; status: "deploying" | "completed" | "failed" } {
   if (!data) {
-    throw new NoDeploymentDataError();
+    throw new Error("The service returned no content.");
   }
 
   let url: string | undefined;
   let status: "deploying" | "completed" | "failed" = "deploying";
 
-  // Direct string response (assume it's a URL)
   if (typeof data === "string") {
     const content = data.trim();
     if (content.startsWith("http")) {
@@ -301,9 +244,7 @@ function extractDeploymentInfo(data: unknown): { url?: string; status: "deployin
     
     // Extract URL from various formats
     url = (record.url as string) || 
-          (typeof record.data === "object" && record.data !== null ? (record.data as Record<string, unknown>).url as string : undefined) ||
-          (record.deployment_url as string) || 
-          (record.deploymentUrl as string);
+          (typeof record.data === "object" && record.data !== null ? (record.data as Record<string, unknown>).url as string : undefined);
     
     // Extract status
     if (typeof record.status === "string" && (record.status === "deploying" || record.status === "completed" || record.status === "failed")) {
@@ -324,18 +265,15 @@ function extractDeploymentInfo(data: unknown): { url?: string; status: "deployin
 // Response types
 export interface PlanResponse {
   prd: string;
-  isMocked?: boolean;
 }
 
 export interface UXResponse {
   ux: string;
-  isMocked?: boolean;
 }
 
 export interface DeployResponse {
   url?: string;
   status: "deploying" | "completed" | "failed";
-  isMocked?: boolean;
 }
 
 /**
@@ -350,45 +288,43 @@ export async function createPlan(idea: string): Promise<PlanResponse> {
     throw new Error("Business idea must be at least 10 characters long");
   }
 
-  // Mock mode
   if (isMockMode()) {
     return {
       prd: `# Product Requirements Document
 
 ## Executive Summary
-**Product:** ${idea.slice(0, 50)}${idea.length > 50 ? "..." : ""}
+**Business Idea:** ${idea}
 
 ## Problem Statement
-Addressing the core challenges in the target market through innovative solutions.
+This document outlines the requirements for developing a business solution that addresses specific market needs and user challenges in the target domain.
 
 ## Target Audience
-- Primary: Business professionals aged 25-45
-- Secondary: Small to medium business owners
-- Tertiary: Freelancers and consultants
+- **Primary Users:** Business professionals and entrepreneurs
+- **Secondary Users:** Stakeholders and decision makers
+- **Market Segment:** Small to medium enterprises
 
 ## Core Features
-1. **User Authentication**: Secure login and registration system
-2. **Dashboard**: Comprehensive overview of key metrics
-3. **Data Management**: Create, read, update, and delete functionality
-4. **Reporting**: Generate insights and analytics
-5. **Mobile Responsive**: Optimized for all devices
+1. **User Authentication** - Secure login and registration system
+2. **Dashboard** - Comprehensive overview with key metrics
+3. **Data Management** - Create, read, update, and delete operations
+4. **Reporting** - Analytics and insights generation
+5. **Mobile Support** - Responsive design for all devices
 
 ## Technical Requirements
-- **Frontend**: React with TypeScript
-- **Backend**: Node.js with Express
-- **Database**: PostgreSQL
-- **Deployment**: Cloud-based infrastructure
+- **Frontend:** Modern web framework with TypeScript
+- **Backend:** RESTful API with robust validation
+- **Database:** Scalable data storage solution
+- **Security:** Industry-standard encryption and privacy
 
 ## Success Metrics
 - User adoption rate: 80% within first quarter
-- Customer satisfaction: 4.5+ stars
-- System uptime: 99.9%
+- System uptime: 99.9% availability
+- User satisfaction: 4.5+ star rating
 
-## Timeline
-- Phase 1 (MVP): 8 weeks
-- Phase 2 (Enhanced features): 12 weeks
-- Phase 3 (Scale): 16 weeks`,
-      isMocked: true,
+## Implementation Timeline
+- **Phase 1 (MVP):** 6-8 weeks
+- **Phase 2 (Enhancement):** 4-6 weeks
+- **Phase 3 (Scale):** Ongoing iterations`,
     };
   }
 
@@ -403,12 +339,7 @@ Addressing the core challenges in the target market through innovative solutions
 
     return { prd };
   } catch (error) {
-    if (error instanceof NoPlanContentError) {
-      throw error;
-    }
-    
     if (error instanceof Error) {
-      // Transform network/server errors into user-friendly messages
       if (error.message.includes("fetch")) {
         throw new Error("Network error. Please check your connection and try again.");
       }
@@ -418,7 +349,7 @@ Addressing the core challenges in the target market through innovative solutions
       if (error.message.includes("429")) {
         throw new Error("Too many requests. Please wait a moment before trying again.");
       }
-      throw new Error("Unable to generate business plan. Please try again.");
+      throw error;
     }
     
     throw new Error("An unexpected error occurred. Please try again.");
@@ -433,57 +364,55 @@ export async function createUX(prd: string): Promise<UXResponse> {
     throw new Error("Product Requirements Document is required");
   }
 
-  // Mock mode
   if (isMockMode()) {
     return {
       ux: `# User Experience Design
 
 ## Design Principles
-- **Simplicity**: Clean, intuitive interface
-- **Accessibility**: WCAG 2.1 AA compliant
-- **Consistency**: Unified design language
-- **Performance**: Fast loading times
+- **Simplicity:** Clean, intuitive interface design
+- **Accessibility:** WCAG 2.1 AA compliance throughout
+- **Consistency:** Unified design language and patterns
+- **Performance:** Fast loading times and smooth interactions
 
 ## User Flows
 
-### Primary Flow: Onboarding
-1. **Landing Page**: Hero section with clear value proposition
-2. **Registration**: Simple 3-step signup process
-3. **Profile Setup**: Guided configuration wizard
-4. **Dashboard**: First-time user welcome tour
+### Primary Flow: User Onboarding
+1. **Landing Page** - Clear value proposition and call-to-action
+2. **Registration** - Streamlined 3-step signup process
+3. **Profile Setup** - Guided configuration with smart defaults
+4. **Dashboard Tour** - Interactive walkthrough of key features
 
-### Secondary Flow: Core Features
-1. **Navigation**: Persistent sidebar with main sections
-2. **Data Entry**: Progressive forms with validation
-3. **Results**: Interactive charts and tables
-4. **Export**: Multiple format options (PDF, CSV, Excel)
+### Core Application Flow
+1. **Navigation** - Persistent sidebar with clear sections
+2. **Data Entry** - Progressive forms with inline validation
+3. **Results Display** - Interactive charts and sortable tables
+4. **Export Options** - Multiple formats (PDF, CSV, Excel)
 
 ## Key Screens
 
 ### Dashboard
 - Header with user profile and notifications
-- Quick stats cards showing key metrics
-- Recent activity feed
-- Call-to-action buttons for primary tasks
+- Quick stats cards showing important metrics
+- Recent activity feed with timestamps
+- Primary action buttons for common tasks
 
 ### Settings
-- Account management panel
-- Preferences and customization options
-- Privacy and security settings
+- Account management and profile editing
+- Preference controls for customization
+- Privacy and security configurations
 - Billing and subscription management
 
 ## Mobile Experience
 - Touch-friendly interface with 44px minimum tap targets
-- Responsive grid layout that adapts to screen size
-- Simplified navigation for mobile contexts
-- Optimized forms for mobile input
+- Responsive grid layout adapting to screen size
+- Simplified navigation optimized for mobile
+- Gesture support for common actions
 
 ## Accessibility Features
-- High contrast mode support
-- Screen reader compatible
-- Keyboard navigation throughout
-- Clear focus indicators`,
-      isMocked: true,
+- High contrast mode for improved visibility
+- Screen reader compatibility with proper ARIA labels
+- Keyboard navigation throughout the application
+- Clear focus indicators for all interactive elements`,
     };
   }
 
@@ -498,12 +427,7 @@ export async function createUX(prd: string): Promise<UXResponse> {
 
     return { ux };
   } catch (error) {
-    if (error instanceof NoUXContentError) {
-      throw error;
-    }
-
     if (error instanceof Error) {
-      // Transform network/server errors into user-friendly messages
       if (error.message.includes("fetch")) {
         throw new Error("Network error. Please check your connection and try again.");
       }
@@ -513,7 +437,7 @@ export async function createUX(prd: string): Promise<UXResponse> {
       if (error.message.includes("429")) {
         throw new Error("Too many requests. Please wait a moment before trying again.");
       }
-      throw new Error("Unable to generate UX design. Please try again.");
+      throw error;
     }
 
     throw new Error("An unexpected error occurred. Please try again.");
@@ -528,12 +452,10 @@ export async function requestDeploy(projectId: string): Promise<DeployResponse> 
     throw new Error("Project ID is required");
   }
 
-  // Mock mode
   if (isMockMode()) {
     return {
       url: "https://example.com/live-demo",
       status: "completed",
-      isMocked: true,
     };
   }
 
@@ -548,12 +470,7 @@ export async function requestDeploy(projectId: string): Promise<DeployResponse> 
 
     return deploymentInfo;
   } catch (error) {
-    if (error instanceof NoDeploymentDataError) {
-      throw error;
-    }
-
     if (error instanceof Error) {
-      // Transform network/server errors into user-friendly messages
       if (error.message.includes("fetch")) {
         throw new Error("Network error. Please check your connection and try again.");
       }
@@ -563,7 +480,7 @@ export async function requestDeploy(projectId: string): Promise<DeployResponse> 
       if (error.message.includes("429")) {
         throw new Error("Too many requests. Please wait a moment before trying again.");
       }
-      throw new Error("Unable to deploy your project. Please try again.");
+      throw error;
     }
 
     throw new Error("An unexpected error occurred. Please try again.");

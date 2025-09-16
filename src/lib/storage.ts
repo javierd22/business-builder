@@ -1,6 +1,5 @@
 /**
- * Type-safe localStorage wrapper for project management
- * All functions are SSR-safe and handle JSON parsing errors gracefully
+ * SSR-safe localStorage layer for project management
  */
 
 export interface Project {
@@ -14,146 +13,149 @@ export interface Project {
   updatedAt: string;
 }
 
-const STORAGE_KEY = "projects";
-
 /**
- * Check if we're in a browser environment (SSR-safe)
+ * Check if we're running in the browser
  */
 function isClient(): boolean {
   return typeof window !== "undefined";
 }
 
 /**
- * Generate a unique ID for new projects
+ * Generate a unique ID for projects
  */
 function generateId(): string {
-  return `project_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return Date.now().toString(36) + Math.random().toString(36).substring(2);
 }
 
 /**
  * Safely parse JSON with fallback
  */
-function safeJsonParse<T>(json: string, fallback: T): T {
+function safeJsonParse<T>(str: string, fallback: T): T {
   try {
-    return JSON.parse(json);
-  } catch (error) {
-    console.error("Failed to parse JSON from localStorage:", error);
+    return JSON.parse(str);
+  } catch {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("Failed to parse JSON from localStorage");
+    }
     return fallback;
   }
 }
 
 /**
  * Get all projects from localStorage
- * Returns empty array if not in browser or if parsing fails
  */
 export function getProjects(): Project[] {
   if (!isClient()) return [];
   
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem("projects");
     if (!stored) return [];
     
     return safeJsonParse<Project[]>(stored, []);
   } catch (error) {
-    console.error("Failed to get projects from localStorage:", error);
+    if (process.env.NODE_ENV === "development") {
+      console.warn("Error reading projects from localStorage:", error);
+    }
     return [];
   }
 }
 
 /**
+ * Get a specific project by ID
+ */
+export function getProject(id: string): Project | null {
+  if (!isClient() || !id) return null;
+  
+  const projects = getProjects();
+  return projects.find(project => project.id === id) || null;
+}
+
+/**
  * Save projects array to localStorage
- * Safely handles SSR and storage errors
  */
 export function saveProjects(projects: Project[]): void {
   if (!isClient()) return;
   
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+    localStorage.setItem("projects", JSON.stringify(projects));
   } catch (error) {
-    console.error("Failed to save projects to localStorage:", error);
+    if (process.env.NODE_ENV === "development") {
+      console.warn("Error saving projects to localStorage:", error);
+    }
   }
 }
 
 /**
- * Add a new project with auto-generated ID and default status
- * Returns the created project
+ * Add a new project
  */
-export function addProject(project: Omit<Project, "id" | "status" | "createdAt" | "updatedAt">): Project {
+export function addProject(data: Pick<Project, "idea">): Project {
   const now = new Date().toISOString();
   const newProject: Project = {
-    ...project,
     id: generateId(),
+    idea: data.idea,
     status: "draft",
     createdAt: now,
     updatedAt: now,
   };
   
   const projects = getProjects();
-  projects.push(newProject);
+  projects.unshift(newProject);
   saveProjects(projects);
   
   return newProject;
 }
 
 /**
- * Update an existing project by ID with partial data
- * Returns true if project was found and updated
+ * Update an existing project
  */
-export function updateProject(id: string, updates: Partial<Omit<Project, "id" | "createdAt">>): boolean {
+export function updateProject(id: string, updates: Partial<Omit<Project, "id" | "createdAt">>): Project | null {
+  if (!isClient() || !id) return null;
+  
   const projects = getProjects();
-  const index = projects.findIndex(p => p.id === id);
+  const index = projects.findIndex(project => project.id === id);
   
-  if (index === -1) {
-    console.warn(`Project with id ${id} not found`);
-    return false;
-  }
+  if (index === -1) return null;
   
-  projects[index] = {
+  const updatedProject: Project = {
     ...projects[index],
     ...updates,
     updatedAt: new Date().toISOString(),
   };
   
+  projects[index] = updatedProject;
   saveProjects(projects);
-  return true;
+  
+  return updatedProject;
 }
 
 /**
- * Delete a project by ID
- * Returns true if project was found and deleted
+ * Delete a project
  */
 export function deleteProject(id: string): boolean {
-  const projects = getProjects();
-  const index = projects.findIndex(p => p.id === id);
+  if (!isClient() || !id) return false;
   
-  if (index === -1) {
-    console.warn(`Project with id ${id} not found`);
-    return false;
+  const projects = getProjects();
+  const filteredProjects = projects.filter(project => project.id !== id);
+  
+  if (filteredProjects.length === projects.length) {
+    return false; // Project not found
   }
   
-  projects.splice(index, 1);
-  saveProjects(projects);
+  saveProjects(filteredProjects);
   return true;
 }
 
 /**
- * Get a single project by ID
- * Returns undefined if not found
- */
-export function getProject(id: string): Project | undefined {
-  const projects = getProjects();
-  return projects.find(p => p.id === id);
-}
-
-/**
- * Clear all projects (useful for testing/reset)
+ * Clear all projects (for development/testing)
  */
 export function clearProjects(): void {
   if (!isClient()) return;
   
   try {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem("projects");
   } catch (error) {
-    console.error("Failed to clear projects from localStorage:", error);
+    if (process.env.NODE_ENV === "development") {
+      console.warn("Error clearing projects from localStorage:", error);
+    }
   }
 }

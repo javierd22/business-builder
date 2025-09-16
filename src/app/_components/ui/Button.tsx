@@ -1,92 +1,74 @@
 import React from "react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
 
-interface BaseButtonProps {
+interface ButtonProps {
   children: React.ReactNode;
+  variant?: "primary" | "secondary" | "ghost";
+  size?: "sm" | "md" | "lg";
   className?: string;
   disabled?: boolean;
-  isLoading?: boolean;
-  size?: "small" | "medium" | "large";
-  variant?: "primary" | "secondary" | "ghost";
-}
-
-interface ButtonProps extends BaseButtonProps {
+  loading?: boolean;
   onClick?: () => void;
+  href?: string;
   type?: "button" | "submit" | "reset";
 }
 
-interface LinkButtonProps extends BaseButtonProps {
-  href: string;
-}
-
-type CombinedButtonProps = ButtonProps | LinkButtonProps;
-
-const sizeClasses = {
-  small: "px-3 py-1.5 text-sm",
-  medium: "px-4 py-2 text-sm",
-  large: "px-6 py-3 text-base",
-};
+const baseClasses = "inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring-gold focus:ring-offset-2";
 
 const variantClasses = {
-  primary: "bg-[#D4AF37] text-[#1F2937] hover:bg-[#B4891E] shadow-sm",
-  secondary: "bg-white text-[#1F2937] border border-[#E5E9EF] hover:bg-[#F4EDE2] shadow-sm",
-  ghost: "bg-transparent text-[#6B7280] hover:bg-[#F4EDE2] hover:text-[#1F2937]",
+  primary: "bg-brand-gold text-white hover:bg-brand-goldDark disabled:opacity-50",
+  secondary: "bg-white border border-metal-silverLight text-text-DEFAULT hover:bg-gray-50 disabled:opacity-50",
+  ghost: "bg-transparent text-text-DEFAULT hover:bg-gray-50 disabled:opacity-50",
 };
 
-export function Button(props: CombinedButtonProps) {
-  const {
-    children,
-    className = "",
-    disabled = false,
-    isLoading = false,
-    size = "medium",
-    variant = "primary",
-  } = props;
+const sizeClasses = {
+  sm: "px-3 py-1.5 text-sm rounded-lg",
+  md: "px-4 py-2 text-sm rounded-lg",
+  lg: "px-6 py-3 text-base rounded-xl",
+};
 
-  const baseClasses = cn(
-    "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200",
-    "focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2",
-    "disabled:opacity-50 disabled:cursor-not-allowed",
-    sizeClasses[size],
-    variantClasses[variant],
-    className
+export function Button({
+  children,
+  variant = "primary",
+  size = "md",
+  className = "",
+  disabled = false,
+  loading = false,
+  onClick,
+  href,
+  type = "button",
+}: ButtonProps) {
+  const classes = `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`;
+  const isDisabled = disabled || loading;
+
+  const content = (
+    <>
+      {loading && (
+        <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+        </svg>
+      )}
+      {children}
+    </>
   );
 
-  if ("href" in props) {
+  if (href && !isDisabled) {
     return (
-      <Link
-        href={props.href}
-        className={baseClasses}
-        aria-disabled={disabled}
-      >
-        {isLoading ? (
-          <div className="flex items-center gap-2">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            <span>Loading...</span>
-          </div>
-        ) : (
-          children
-        )}
+      <Link href={href} className={classes}>
+        {content}
       </Link>
     );
   }
 
   return (
     <button
-      type={props.type || "button"}
-      onClick={props.onClick}
-      disabled={disabled || isLoading}
-      className={baseClasses}
+      type={type}
+      className={classes}
+      disabled={isDisabled}
+      onClick={onClick}
     >
-      {isLoading ? (
-        <div className="flex items-center gap-2">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-          <span>Loading...</span>
-        </div>
-      ) : (
-        children
-      )}
+      {content}
     </button>
   );
 }

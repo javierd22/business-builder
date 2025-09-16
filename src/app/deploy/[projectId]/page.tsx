@@ -61,14 +61,14 @@ export default function DeployPage() {
 
   if (isLoadingProject) {
     return (
-      <div className="min-h-screen bg-[#F4EDE2] py-12">
+      <div className="min-h-screen bg-brand-beige py-12">
         <div className="mx-auto max-w-4xl px-4">
           <Card>
             <CardContent>
               <div className="flex items-center justify-center py-12">
                 <div className="text-center">
-                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#D4AF37] border-t-transparent mx-auto mb-4" />
-                  <p className="text-[#6B7280]">Loading deployment status...</p>
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-gold border-t-transparent mx-auto mb-4" />
+                  <p className="text-text-muted">Loading deployment status...</p>
                 </div>
               </div>
             </CardContent>
@@ -80,7 +80,7 @@ export default function DeployPage() {
 
   if (!project) {
     return (
-      <div className="min-h-screen bg-[#F4EDE2] py-12">
+      <div className="min-h-screen bg-brand-beige py-12">
         <div className="mx-auto max-w-2xl px-4">
           <Card>
             <CardHeader>
@@ -89,7 +89,7 @@ export default function DeployPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-center space-y-4">
-              <p className="text-[#6B7280]">
+              <p className="text-text-muted">
                 This project doesn&apos;t exist or has been deleted.
               </p>
               <Button href="/idea" variant="primary">
@@ -103,12 +103,12 @@ export default function DeployPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F4EDE2] py-12">
+    <div className="min-h-screen bg-brand-beige py-12">
       <div className="mx-auto max-w-4xl px-4">
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle as="h1">
+              <CardTitle as="h1" className="text-2xl">
                 Deployment Status
               </CardTitle>
               <div className={`flex items-center gap-2 text-sm px-3 py-1 rounded-full border ${getStatusColor(project.status)}`}>
@@ -116,7 +116,7 @@ export default function DeployPage() {
                 <span className="capitalize">{project.status.replace("_", " ")}</span>
               </div>
             </div>
-            <p className="text-sm text-[#6B7280] mt-2">
+            <p className="text-sm text-text-muted mt-2">
               <strong>Project:</strong> {project.idea}
             </p>
           </CardHeader>
@@ -127,23 +127,23 @@ export default function DeployPage() {
               {project.deploymentLink && project.status === "completed" && (
                 <div className="text-center space-y-4">
                   <div className="text-6xl mb-4">🎉</div>
-                  <h2 className="text-2xl font-bold text-[#1F2937]">
+                  <h2 className="text-2xl font-bold text-text-DEFAULT">
                     Your Business App is Live!
                   </h2>
-                  <p className="text-[#6B7280]">
+                  <p className="text-text-muted">
                     Congratulations! Your business application has been successfully deployed and is now accessible to users.
                   </p>
                   
                   {/* Mock Mode Indicator */}
                   {isMockDemo && (
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl">
                       <p className="text-sm text-blue-800">
-                        ℹ️ This is a demonstration URL using sample content
+                        ℹ️ Using sample content for demonstration
                       </p>
                     </div>
                   )}
 
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-4">
                     <p className="text-sm text-green-800 mb-3">
                       <strong>Live URL:</strong>
                     </p>
@@ -154,7 +154,7 @@ export default function DeployPage() {
                   <Button
                     onClick={openLiveApp}
                     variant="primary"
-                    size="large"
+                    size="lg"
                     className="w-full sm:w-auto"
                   >
                     🚀 View Live App
@@ -166,13 +166,13 @@ export default function DeployPage() {
               {project.status === "deploying" && (
                 <div className="text-center space-y-4">
                   <div className="text-6xl mb-4">🚀</div>
-                  <h2 className="text-2xl font-bold text-[#1F2937]">
+                  <h2 className="text-2xl font-bold text-text-DEFAULT">
                     Deployment in Progress
                   </h2>
-                  <p className="text-[#6B7280]">
+                  <p className="text-text-muted">
                     Your business application is being deployed to production. This usually takes 2-5 minutes.
                   </p>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                     <div className="flex items-center justify-center gap-2 mb-2">
                       <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
                       <span className="text-sm font-medium text-blue-900">Deploying...</span>
@@ -184,7 +184,7 @@ export default function DeployPage() {
                   <Button
                     onClick={() => window.location.reload()}
                     variant="secondary"
-                    size="large"
+                    size="lg"
                   >
                     🔄 Refresh Status
                   </Button>
@@ -195,13 +195,13 @@ export default function DeployPage() {
               {project.status === "failed" && (
                 <div className="text-center space-y-4">
                   <div className="text-6xl mb-4">❌</div>
-                  <h2 className="text-2xl font-bold text-[#1F2937]">
+                  <h2 className="text-2xl font-bold text-text-DEFAULT">
                     Deployment Failed
                   </h2>
-                  <p className="text-[#6B7280]">
+                  <p className="text-text-muted">
                     Unfortunately, there was an issue deploying your application. This is usually temporary.
                   </p>
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-4">
                     <p className="text-sm text-red-800">
                       <strong>What you can do:</strong>
                     </p>
@@ -214,7 +214,7 @@ export default function DeployPage() {
                   <Button
                     href={`/ux/preview/${project.id}`}
                     variant="primary"
-                    size="large"
+                    size="lg"
                   >
                     🔄 Try Deploying Again
                   </Button>
@@ -225,13 +225,13 @@ export default function DeployPage() {
               {!project.deploymentLink && project.status !== "deploying" && project.status !== "failed" && (
                 <div className="text-center space-y-4">
                   <div className="text-6xl mb-4">⏳</div>
-                  <h2 className="text-2xl font-bold text-[#1F2937]">
+                  <h2 className="text-2xl font-bold text-text-DEFAULT">
                     Deployment Status Unavailable
                   </h2>
-                  <p className="text-[#6B7280]">
+                  <p className="text-text-muted">
                     We couldn&apos;t determine the current deployment status for this project.
                   </p>
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
                     <p className="text-sm text-yellow-800">
                       This project may need to go through the UX preview stage before deployment.
                     </p>
@@ -239,7 +239,7 @@ export default function DeployPage() {
                   <Button
                     href={`/ux/preview/${project.id}`}
                     variant="primary"
-                    size="large"
+                    size="lg"
                   >
                     ← Back to UX Preview
                   </Button>
@@ -253,7 +253,7 @@ export default function DeployPage() {
               <Button
                 href="/idea"
                 variant="secondary"
-                size="large"
+                size="lg"
               >
                 💡 Start New Idea
               </Button>
@@ -261,7 +261,7 @@ export default function DeployPage() {
               <Button
                 href="/"
                 variant="ghost"
-                size="large"
+                size="lg"
               >
                 🏠 Back to Home
               </Button>
