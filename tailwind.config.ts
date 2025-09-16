@@ -2,9 +2,10 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: [
-    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/app/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./src/components/**/*.{ts,tsx}",
   ],
   theme: {
     extend: {
@@ -21,23 +22,20 @@ const config: Config = {
         text: {
           DEFAULT: "#1F2937",
           muted: "#6B7280",
+          onGold: "#1F2937",
+          onDark: "#FFFFFF",
         },
         ring: {
           gold: "#D4AF37",
         },
       },
-      borderRadius: {
-        "2xl": "1rem",
-      },
       boxShadow: {
-        soft: "0 4px 16px rgba(0, 0, 0, 0.04)",
+        soft: "0 10px 30px rgba(2, 6, 23, 0.08)",
       },
       container: {
         center: true,
-        padding: "1.5rem",
-        screens: {
-          "2xl": "1400px",
-        },
+        padding: "1rem",
+        screens: { "2xl": "1280px" },
       },
     },
   },

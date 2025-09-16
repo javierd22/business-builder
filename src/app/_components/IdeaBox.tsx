@@ -1,26 +1,51 @@
-// src/app/_components/IdeaBox.tsx
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { addProject, updateProject } from "@/lib/storage";
+import { createPlan } from "@/lib/api";
 
 export default function IdeaBox() {
   const [idea, setIdea] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
   const suggestions = [
     "Reporting Dashboard",
-    "Gaming Platform",
+    "Gaming Platform", 
     "Onboarding Portal",
     "Networking App",
     "Room Visualizer",
   ];
 
-  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (idea.trim()) {
-      console.log("idea:", idea);
+    setError(null);
+
+    if (!idea.trim() || idea.trim().length < 10) {
+      setError("Please describe your idea with at least 10 characters.");
+      return;
     }
-    router.push("/idea");
+
+    setIsLoading(true);
+    try {
+      const newProject = addProject({ idea });
+      const result = await createPlan(idea);
+
+      if (result.prd) {
+        updateProject(newProject.id, { prd: result.prd, status: "planning" });
+        router.push(`/plan/review/${newProject.id}`);
+      } else {
+        setError(result.message || "Failed to generate PRD. Please try again.");
+        updateProject(newProject.id, { status: "failed" });
+      }
+    } catch (err) {
+      console.error("Idea submission error:", err);
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -38,10 +63,16 @@ export default function IdeaBox() {
           className="absolute bottom-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r from-[#FFF4C4] via-[#FFECB3] to-[#FFE0B2] border border-[#F7DC6F] text-[#8B7355] shadow-[0_4px_16px_rgba(247,220,111,0.25)] hover:from-[#FFF9E6] hover:via-[#FFF4C4] hover:to-[#FFECB3] hover:shadow-[0_6px_20px_rgba(247,220,111,0.35)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F7DC6F] transition-all transform hover:scale-110 font-bold text-lg"
           aria-label="Submit idea"
           title="Submit idea"
+          disabled={isLoading}
         >
-          ↑
+          {isLoading ? "..." : "↑"}
         </button>
       </form>
+      {error && (
+        <div className="mt-3 text-sm text-red-600 text-center" role="alert">
+          {error}
+        </div>
+      )}
 
       <div className="mt-3 rounded-xl bg-gradient-to-br from-[#F8F9FA] via-[#F5F6F7] to-[#F1F2F4] p-3 border border-[#E8E9EA] shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
         <p className="mb-2 text-xs text-[#6B7280] font-medium">Not sure where to start? Try one of these:</p>
