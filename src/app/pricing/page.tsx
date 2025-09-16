@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app
 import { Button } from "@/app/_components/ui/Button";
 import { Telemetry } from "@/lib/telemetry";
 import { isFeatureEnabled } from "@/lib/flags";
+import { getVariant } from "@/lib/experiments";
+import { recordEvent } from "@/lib/observability";
 
 const PRICING_TIERS = [
   {
@@ -67,11 +69,24 @@ const PRICING_TIERS = [
 
 export default function PricingPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [ctaVariant, setCtaVariant] = useState('A');
   const showPricing = isFeatureEnabled('showPricing');
 
   useEffect(() => {
     if (showPricing) {
       Telemetry.pricingPageViewed();
+      
+      // Record page view for funnel tracking
+      recordEvent({
+        name: 'view',
+        route: '/pricing',
+        ok: true,
+        ms: 0
+      });
+      
+      // Get CTA variant for experiment
+      const variant = getVariant('pricing_cta_label_v1');
+      setCtaVariant(variant);
     }
   }, [showPricing]);
 
@@ -100,6 +115,19 @@ export default function PricingPage() {
     try {
       Telemetry.pricingCtaClicked(tier);
       Telemetry.tierSelected(tier);
+      
+      // Record CTA click for funnel tracking
+      recordEvent({
+        name: 'cta',
+        route: '/pricing',
+        ok: true,
+        ms: 0,
+        meta: { 
+          action: 'pricing-cta',
+          tier: tier,
+          variant: ctaVariant
+        }
+      });
       
       // Simulate a brief loading state
       await new Promise(resolve => setTimeout(resolve, 1000));

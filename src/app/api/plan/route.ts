@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generatePlan } from '@/lib/llm/client';
 import { getClientIP, checkRateLimit } from '@/lib/rate-limit';
+import { validateInput, shouldBlockForLLM } from '@/lib/security';
 // import { buildPRDPrompt, buildMockPRD } from '@/lib/prompts';
 
 const RATE_LIMIT_MAX_REQUESTS = 10;
@@ -40,25 +41,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (idea.trim().length < 10) {
+    // Security validation
+    const validation = validateInput(idea, { minChars: 10, maxChars: 10000 });
+    if (validation.reasons.length > 0) {
       return NextResponse.json(
-        { message: 'Business idea must be at least 10 characters long' },
+        { message: `Content validation failed: ${validation.reasons.join(', ')}` },
         { status: 400 }
       );
     }
 
-    if (idea.trim().length > 5000) {
+    // Check if content should be blocked from LLM
+    const blockCheck = shouldBlockForLLM(idea);
+    if (blockCheck.blocked) {
       return NextResponse.json(
-        { message: 'Business idea is too long (max 5000 characters)' },
-        { status: 400 }
-      );
-    }
-
-    // Basic profanity filter placeholder
-    const profanityPattern = /\b(shit|fuck|damn|hell)\b/i;
-    if (profanityPattern.test(idea)) {
-      return NextResponse.json(
-        { message: 'Please use professional language in your business idea' },
+        { message: `Content appears sensitive or inappropriate. Please revise and try again. Reasons: ${blockCheck.reasons.join(', ')}` },
         { status: 400 }
       );
     }

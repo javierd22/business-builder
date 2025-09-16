@@ -2,6 +2,8 @@
  * Resilient API client with tolerant parsing, exponential backoff retry, and mock mode
  */
 
+import { recordEvent } from './observability';
+
 interface RetryOptions {
   maxRetries: number;
   baseDelay: number;
@@ -93,14 +95,14 @@ async function fetchWithRetry(
 
       if (!shouldRetry(error, attempt, retryOptions.maxRetries)) {
         throw error;
-      }
-
-      if (attempt < retryOptions.maxRetries) {
-        const delay = calculateDelay(attempt, retryOptions.baseDelay, retryOptions.maxDelay);
-        console.warn(`Request failed (attempt ${attempt + 1}/${retryOptions.maxRetries + 1}), retrying in ${delay}ms:`, error);
-        await sleep(delay);
-      }
     }
+
+    if (attempt < retryOptions.maxRetries) {
+      const delay = calculateDelay(attempt, retryOptions.baseDelay, retryOptions.maxDelay);
+        console.warn(`Request failed (attempt ${attempt + 1}/${retryOptions.maxRetries + 1}), retrying in ${delay}ms:`, error);
+      await sleep(delay);
+    }
+  }
   }
 
   throw lastError;
@@ -114,9 +116,9 @@ async function parseResponse(response: Response): Promise<unknown> {
   const contentType = response.headers.get("content-type");
   
   if (contentType?.includes("application/json")) {
-    try {
-      return await response.json();
-    } catch (error) {
+  try {
+    return await response.json();
+  } catch (error) {
       console.warn("Failed to parse JSON response:", error);
       throw new Error("Invalid response format");
     }
@@ -297,6 +299,8 @@ export interface DeployResponse {
  * Create a business plan from an idea
  */
 export async function createPlan(idea: string, persona?: string, job?: string): Promise<PlanResponse> {
+  const startTime = performance.now();
+  
   if (!idea.trim()) {
     throw new Error("Business idea is required");
   }
@@ -371,8 +375,35 @@ This document outlines the requirements for developing a business solution that 
     }
 
     const data = await response.json();
+    const duration = Math.round(performance.now() - startTime);
+    
+    // Record successful API call
+    recordEvent({
+      name: 'api-call',
+      route: '/api/plan',
+      ok: true,
+      ms: duration,
+      meta: {
+        provider: data.meta?.provider || 'unknown',
+        model: data.meta?.model || 'unknown'
+      }
+    });
+    
     return data as PlanResponse;
   } catch (error) {
+    const duration = Math.round(performance.now() - startTime);
+    
+    // Record failed API call
+    recordEvent({
+      name: 'api-call',
+      route: '/api/plan',
+      ok: false,
+      ms: duration,
+      meta: {
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    });
+    
     if (error instanceof Error) {
       if (error.message.includes("fetch")) {
         throw new Error("Network error. Please check your connection and try again.");
@@ -394,6 +425,8 @@ This document outlines the requirements for developing a business solution that 
  * Create UX design from a PRD
  */
 export async function createUX(prd: string, persona?: string, job?: string): Promise<UXResponse> {
+  const startTime = performance.now();
+  
   if (!prd.trim()) {
     throw new Error("Product Requirements Document is required");
   }
@@ -482,8 +515,35 @@ export async function createUX(prd: string, persona?: string, job?: string): Pro
     }
 
     const data = await response.json();
+    const duration = Math.round(performance.now() - startTime);
+    
+    // Record successful API call
+    recordEvent({
+      name: 'api-call',
+      route: '/api/ux',
+      ok: true,
+      ms: duration,
+      meta: {
+        provider: data.meta?.provider || 'unknown',
+        model: data.meta?.model || 'unknown'
+      }
+    });
+    
     return data as UXResponse;
   } catch (error) {
+    const duration = Math.round(performance.now() - startTime);
+    
+    // Record failed API call
+    recordEvent({
+      name: 'api-call',
+      route: '/api/ux',
+      ok: false,
+      ms: duration,
+      meta: {
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    });
+    
     if (error instanceof Error) {
       if (error.message.includes("fetch")) {
         throw new Error("Network error. Please check your connection and try again.");
@@ -505,6 +565,8 @@ export async function createUX(prd: string, persona?: string, job?: string): Pro
  * Request deployment of a project
  */
 export async function requestDeploy(projectId: string, prd: string, ux: string): Promise<DeployResponse> {
+  const startTime = performance.now();
+  
   if (!projectId.trim()) {
     throw new Error("Project ID is required");
   }
@@ -536,8 +598,35 @@ export async function requestDeploy(projectId: string, prd: string, ux: string):
     }
 
     const data = await response.json();
+    const duration = Math.round(performance.now() - startTime);
+    
+    // Record successful API call
+    recordEvent({
+      name: 'api-call',
+      route: '/api/deploy',
+      ok: true,
+      ms: duration,
+      meta: {
+        projectId: projectId.trim()
+      }
+    });
+    
     return data as DeployResponse;
   } catch (error) {
+    const duration = Math.round(performance.now() - startTime);
+    
+    // Record failed API call
+    recordEvent({
+      name: 'api-call',
+      route: '/api/deploy',
+      ok: false,
+      ms: duration,
+      meta: {
+        projectId: projectId.trim(),
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    });
+    
     if (error instanceof Error) {
       if (error.message.includes("fetch")) {
         throw new Error("Network error. Please check your connection and try again.");

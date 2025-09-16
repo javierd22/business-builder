@@ -6,16 +6,19 @@ import { addProject, updateProject, getProfile } from "@/lib/storage";
 import { createPlan } from "@/lib/api";
 import { Telemetry } from "@/lib/telemetry";
 import { recordMilestone } from "@/lib/insights";
+import { recordEvent } from "@/lib/observability";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/_components/ui/Card";
 import { Textarea } from "@/app/_components/ui/Textarea";
 import { Button } from "@/app/_components/ui/Button";
 import FlowSteps from "@/app/_components/FlowSteps";
+import ConsentBanner, { useConsent } from "@/app/_components/ConsentBanner";
 
 export default function IdeaPage() {
   const [idea, setIdea] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<{ persona: string; job: string } | null>(null);
+  const { isConsented, isLoading: consentLoading } = useConsent();
   const router = useRouter();
 
   const suggestions = [
@@ -34,6 +37,14 @@ export default function IdeaPage() {
         job: userProfile.job,
       });
     }
+    
+    // Record page view for funnel tracking
+    recordEvent({
+      name: 'view',
+      route: '/idea',
+      ok: true,
+      ms: 0
+    });
   }, []);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -50,6 +61,15 @@ export default function IdeaPage() {
       const newProject = addProject({ idea });
       Telemetry.ideaCreated();
       recordMilestone(newProject.id, 'idea_created');
+      
+      // Record CTA click for funnel tracking
+      recordEvent({
+        name: 'cta',
+        route: '/idea',
+        ok: true,
+        ms: 0,
+        meta: { action: 'generate-plan' }
+      });
       
       const result = await createPlan(idea, profile?.persona, profile?.job);
       Telemetry.prdGenerated();
@@ -83,6 +103,7 @@ export default function IdeaPage() {
     <div className="min-h-screen bg-gradient-to-br from-[#FBF9F4] via-[#F8F4ED] to-[#F5F0E8] py-12">
       <FlowSteps currentStep="idea" />
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+        <ConsentBanner className="mb-6" />
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-[#4A5568] mb-4">
             What&apos;s your business idea?
@@ -125,7 +146,7 @@ export default function IdeaPage() {
                   }
                   rows={6}
                   className="w-full"
-                  disabled={isLoading}
+                  disabled={isLoading || !isConsented}
                 />
                 <p className="text-sm text-[#6B7280] mt-2">
                   {idea.length}/5000 characters
@@ -160,13 +181,21 @@ export default function IdeaPage() {
                 </div>
               )}
 
+              {!isConsented && (
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800">
+                    <strong>Consent Required:</strong> Please accept the privacy notice above to generate your business plan.
+                  </p>
+                </div>
+              )}
+              
               <div className="flex justify-end">
                 <Button
                   type="submit"
-                  disabled={isLoading || idea.trim().length < 10}
+                  disabled={isLoading || idea.trim().length < 10 || !isConsented}
                   className="bg-gradient-to-r from-[#FFF4C4] via-[#FFECB3] to-[#FFE0B2] border border-[#F7DC6F] text-[#8B7355] hover:from-[#FFF9E6] hover:via-[#FFF4C4] hover:to-[#FFECB3] hover:shadow-[0_4px_12px_rgba(247,220,111,0.4)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F7DC6F] transition-all transform hover:scale-[1.02]"
                 >
-                  {isLoading ? "Generating PRD..." : "Generate PRD"}
+                  {isLoading ? "Generating PRD..." : !isConsented ? "Consent Required" : "Generate PRD"}
                 </Button>
               </div>
             </form>

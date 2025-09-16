@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateUX } from '@/lib/llm/client';
 import { getClientIP, checkRateLimit } from '@/lib/rate-limit';
+import { validateInput, shouldBlockForLLM } from '@/lib/security';
 // import { buildUXPrompt, buildMockUX } from '@/lib/prompts';
 
 const RATE_LIMIT_MAX_REQUESTS = 10;
@@ -40,25 +41,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (prd.trim().length < 50) {
+    // Security validation
+    const validation = validateInput(prd, { minChars: 50, maxChars: 50000 });
+    if (validation.reasons.length > 0) {
       return NextResponse.json(
-        { message: 'PRD must be at least 50 characters long' },
+        { message: `Content validation failed: ${validation.reasons.join(', ')}` },
         { status: 400 }
       );
     }
 
-    if (prd.trim().length > 50000) {
+    // Check if content should be blocked from LLM
+    const blockCheck = shouldBlockForLLM(prd);
+    if (blockCheck.blocked) {
       return NextResponse.json(
-        { message: 'PRD is too long (max 50000 characters)' },
-        { status: 400 }
-      );
-    }
-
-    // Basic profanity filter placeholder
-    const profanityPattern = /\b(shit|fuck|damn|hell)\b/i;
-    if (profanityPattern.test(prd)) {
-      return NextResponse.json(
-        { message: 'Please use professional language in your PRD' },
+        { message: `Content appears sensitive or inappropriate. Please revise and try again. Reasons: ${blockCheck.reasons.join(', ')}` },
         { status: 400 }
       );
     }
