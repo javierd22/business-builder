@@ -12,40 +12,26 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          blue: "#2563EB",
-          lime: "#D3F365",
-          orange: "#F59E0B",
-          lavender: "#C7C7F9",
-          periwinkle: "#D7DBFF",
-          peach: "#FFB37B",
+          gold: "#D4AF37",
+          goldDark: "#B4891E",
+          beige: "#F4EDE2",
         },
-        surface: {
-          DEFAULT: "#FFFFFF",
-          glass: "rgba(255,255,255,0.70)",
+        metal: {
+          silver: "#C0C7D0",
+          silverLight: "#E5E9EF",
         },
         text: {
-          DEFAULT: "#0F172A", // primary
-          muted: "#475569",   // secondary
-          onBrand: "#FFFFFF",
-          onLime: "#0F172A",
-        },
-        border: {
-          DEFAULT: "#E5E7EB",
-        },
-        state: {
-          success: "#16A34A",
-          warning: "#F59E0B",
-          error: "#DC2626",
+          DEFAULT: "#1F2937",
+          muted: "#6B7280",
+          onGold: "#1F2937",
+          onDark: "#FFFFFF",
         },
         ring: {
-          blue: "#3B82F6",
+          gold: "#D4AF37",
         },
       },
       boxShadow: {
         soft: "0 10px 30px rgba(2, 6, 23, 0.08)",
-      },
-      borderRadius: {
-        xl2: "1rem",
       },
       container: {
         center: true,
@@ -54,10 +40,6 @@ const config: Config = {
       },
     },
   },
-  plugins: [
-    require("@tailwindcss/forms")({
-      strategy: "class",
-    }),
-  ],
+  plugins: [],
 };
 export default config;
