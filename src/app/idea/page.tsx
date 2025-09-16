@@ -49,7 +49,7 @@ export default function IdeaPage() {
     try {
       const newProject = addProject({ idea });
       Telemetry.ideaCreated();
-      recordMilestone(newProject.id, 'idea_created', idea);
+      recordMilestone(newProject.id, 'idea_created');
       
       const result = await createPlan(idea, profile?.persona, profile?.job);
       Telemetry.prdGenerated();
