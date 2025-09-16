@@ -304,7 +304,7 @@ export function validateProjectJSON(jsonData: unknown): { valid: boolean; projec
       prd: data.prd as string || undefined,
       ux: data.ux as string || undefined,
       deploymentLink: data.deploymentLink as string || undefined,
-      status: data.status,
+      status: data.status as "draft" | "planning" | "ux_design" | "deploying" | "completed" | "failed",
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       llm: data.llm as Record<string, unknown> || undefined,
