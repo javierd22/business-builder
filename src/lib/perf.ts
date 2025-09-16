@@ -46,7 +46,7 @@ export function init(): void {
             ms: Math.round(lastEntry.startTime),
             meta: {
               type: 'lcp',
-              element: (lastEntry as any).element?.tagName || 'unknown'
+              element: (lastEntry as unknown as { element?: { tagName?: string } }).element?.tagName || 'unknown'
             }
           });
         });
@@ -61,9 +61,9 @@ export function init(): void {
         let clsValue = 0;
         const clsObserver = new PerformanceObserver((list) => {
           for (const entry of list.getEntries()) {
-            const layoutShiftEntry = entry as any;
+            const layoutShiftEntry = entry as unknown as { hadRecentInput?: boolean; value?: number };
             if (!layoutShiftEntry.hadRecentInput) {
-              clsValue += (layoutShiftEntry.value as number) || 0;
+              clsValue += layoutShiftEntry.value || 0;
             }
           }
           
@@ -94,7 +94,7 @@ export function init(): void {
       meta: {
         userAgent: navigator.userAgent,
         viewport: `${window.innerWidth}x${window.innerHeight}`,
-        connection: (navigator as any).connection?.effectiveType || 'unknown'
+        connection: (navigator as unknown as { connection?: { effectiveType?: string } }).connection?.effectiveType || 'unknown'
       }
     });
 
@@ -183,7 +183,7 @@ export function getPerformanceMetrics(): {
 
   // Memory usage (if available)
   if ('memory' in performance) {
-    const memory = (performance as any).memory as Record<string, number>;
+    const memory = (performance as unknown as { memory?: Record<string, number> }).memory as Record<string, number>;
     metrics.memory = {
       usedJSHeapSize: memory.usedJSHeapSize,
       totalJSHeapSize: memory.totalJSHeapSize,
