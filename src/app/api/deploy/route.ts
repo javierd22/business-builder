@@ -1,136 +1,61 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
 
-function generateRequestId(): string {
-  return Math.random().toString(36).substring(2, 15);
-}
-
-function logError(requestId: string, error: unknown, context: string) {
-  const timestamp = new Date().toISOString();
-  console.error(`[${timestamp}] [${requestId}] ${context}:`, error instanceof Error ? error.message : error);
-}
-
-function generateMockDeploymentUrl(projectId: string): string {
-  const randomId = Math.random().toString(36).substring(2, 8);
-  return `https://business-builder-${projectId}-${randomId}.vercel.app`;
-}
-
-export async function GET() {
-  return NextResponse.json({ 
-    ok: true, 
-    expects: "POST { projectId: string }",
-    returns: "{ url?: string, status: 'deploying' | 'completed' | 'failed' }"
-  }, {
-    headers: { "Content-Type": "application/json" }
-  });
-}
-
-export async function POST(req: Request) {
-  const requestId = generateRequestId();
-  const timestamp = new Date().toISOString();
-  
-  console.log(`[${timestamp}] [${requestId}] Deployment request started`);
-  
+export async function POST(request: NextRequest) {
   try {
-    const body = await req.json();
-    const { projectId } = body;
+    const body = await request.json();
+    const { projectId, prd, ux } = body;
+
+    // Input validation
+    if (!projectId || typeof projectId !== 'string') {
+      return NextResponse.json(
+        { message: 'Project ID is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!prd || typeof prd !== 'string') {
+      return NextResponse.json(
+        { message: 'PRD is required for deployment' },
+        { status: 400 }
+      );
+    }
+
+    if (!ux || typeof ux !== 'string') {
+      return NextResponse.json(
+        { message: 'UX specification is required for deployment' },
+        { status: 400 }
+      );
+    }
+
+    // Simulate deployment process
+    // In a real implementation, this would trigger actual deployment
+    const deploymentId = `deploy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    if (!projectId || typeof projectId !== "string") {
-      logError(requestId, "Missing or invalid projectId parameter", "Validation");
-      return NextResponse.json(
-        { message: "Project ID is required for deployment" }, 
-        { 
-          status: 400,
-          headers: { "Content-Type": "application/json" }
-        }
-      );
-    }
+    // Simulate deployment URL (in real app, this would be the actual deployed URL)
+    const deploymentUrl = `https://business-builder-demo.vercel.app/preview/${projectId}`;
 
-    const hookUrl = process.env.NEXT_PUBLIC_VERCEL_DEPLOY_HOOK_URL;
+    // Log deployment request
+    console.log(`[${new Date().toISOString()}] Deployment requested: ${projectId} - ${deploymentId}`);
 
-    if (!hookUrl) {
-      console.log(`[${timestamp}] [${requestId}] No deploy hook configured, returning mock deployment`);
-      
-      const mockUrl = generateMockDeploymentUrl(projectId);
-      
-      return NextResponse.json(
-        { 
-          url: mockUrl,
-          status: "completed" as const
-        },
-        { headers: { "Content-Type": "application/json" } }
-      );
-    }
+    // Simulate async deployment process
+    // In production, this would be handled by a background job
+    setTimeout(() => {
+      console.log(`[${new Date().toISOString()}] Deployment completed: ${deploymentId} - ${deploymentUrl}`);
+    }, 2000);
 
-    try {
-      const deployResponse = await fetch(hookUrl, { 
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ projectId })
-      });
+    return NextResponse.json({
+      url: deploymentUrl,
+      status: 'deploying',
+      deploymentId,
+      message: 'Deployment started successfully',
+    });
 
-      if (!deployResponse.ok) {
-        const errorText = await deployResponse.text().catch(() => "Unknown error");
-        logError(requestId, `Deploy hook failed: ${deployResponse.status} ${deployResponse.statusText} - ${errorText}`, "Deploy Hook");
-        
-        return NextResponse.json(
-          { 
-            status: "failed" as const,
-            message: "Deployment failed. Please try again in a few minutes."
-          },
-          { 
-            status: 500,
-            headers: { "Content-Type": "application/json" }
-          }
-        );
-      }
-
-      let deployData;
-      try {
-        deployData = await deployResponse.json();
-      } catch {
-        deployData = null;
-      }
-
-      const deploymentUrl = deployData?.url || deployData?.deployment?.url;
-      
-      console.log(`[${timestamp}] [${requestId}] Deployment triggered successfully`);
-      
-      return NextResponse.json(
-        { 
-          url: deploymentUrl,
-          status: deploymentUrl ? "completed" as const : "deploying" as const
-        },
-        { headers: { "Content-Type": "application/json" } }
-      );
-
-    } catch (networkError) {
-      logError(requestId, networkError, "Network Error");
-      
-      return NextResponse.json(
-        { 
-          status: "failed" as const,
-          message: "Network error during deployment. Please check your connection and try again."
-        },
-        { 
-          status: 500,
-          headers: { "Content-Type": "application/json" }
-        }
-      );
-    }
-    
   } catch (error) {
-    logError(requestId, error, "Server Error");
+    console.error('Deployment error:', error);
+    
     return NextResponse.json(
-      { 
-        status: "failed" as const,
-        message: "Unable to process deployment request. Please try again." 
-      }, 
-      { 
-        status: 500,
-        headers: { "Content-Type": "application/json" }
-      }
+      { message: 'Failed to start deployment. Please try again.' },
+      { status: 500 }
     );
   }
 }

@@ -1,5 +1,5 @@
 /**
- * Robust API client with tolerant parsing, exponential backoff retry, and mock mode
+ * Resilient API client with tolerant parsing, exponential backoff retry, and mock mode
  */
 
 interface RetryOptions {
@@ -48,11 +48,14 @@ function shouldRetry(error: unknown, attempt: number, maxRetries: number): boole
     return true;
   }
 
-  // HTTP errors
-  if (error instanceof Response) {
-    const status = error.status;
-    // Retry on 5xx server errors and 429 rate limit
-    return status >= 500 || status === 429;
+  // 5xx server errors should be retried
+  if (error instanceof Error && error.message.includes("500")) {
+    return true;
+  }
+
+  // Rate limiting should be retried
+  if (error instanceof Error && error.message.includes("429")) {
+    return true;
   }
 
   return false;
@@ -63,217 +66,211 @@ function shouldRetry(error: unknown, attempt: number, maxRetries: number): boole
  */
 async function fetchWithRetry(
   url: string,
-  options: RequestInit = {},
+  options: RequestInit,
   retryOptions: RetryOptions = DEFAULT_RETRY_OPTIONS
 ): Promise<Response> {
   let lastError: unknown;
 
   for (let attempt = 0; attempt <= retryOptions.maxRetries; attempt++) {
     try {
-      const response = await fetch(url, {
-        headers: {
-          "Content-Type": "application/json",
-          ...options.headers,
-        },
-        ...options,
-      });
+      const response = await fetch(url, options);
 
-      if (!response.ok && !shouldRetry(response, attempt, retryOptions.maxRetries)) {
-        throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+      // Don't retry on 4xx errors (except 429)
+      if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+        return response;
       }
 
+      // Don't retry on successful responses
       if (response.ok) {
         return response;
       }
 
-      lastError = response;
+      // For 5xx and 429, throw an error to trigger retry
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+
     } catch (error) {
       lastError = error;
 
       if (!shouldRetry(error, attempt, retryOptions.maxRetries)) {
-        break;
+        throw error;
+      }
+
+      if (attempt < retryOptions.maxRetries) {
+        const delay = calculateDelay(attempt, retryOptions.baseDelay, retryOptions.maxDelay);
+        console.warn(`Request failed (attempt ${attempt + 1}/${retryOptions.maxRetries + 1}), retrying in ${delay}ms:`, error);
+        await sleep(delay);
       }
     }
-
-    if (attempt < retryOptions.maxRetries) {
-      const delay = calculateDelay(attempt, retryOptions.baseDelay, retryOptions.maxDelay);
-      await sleep(delay);
-    }
   }
 
-  if (lastError instanceof Response) {
-    await lastError.text().catch(() => "Unknown error");
-    throw new Error("Service temporarily unavailable. Please try again in a few minutes.");
-  }
-
-  throw new Error("Network error. Please check your connection and try again.");
+  throw lastError;
 }
 
 /**
- * Parse response with tolerant fallbacks
+ * Parse API response with tolerant error handling
  */
 async function parseResponse(response: Response): Promise<unknown> {
-  const text = await response.text();
+  const contentType = response.headers.get("content-type");
   
-  if (!text.trim()) {
-    return null;
+  if (contentType?.includes("application/json")) {
+    try {
+      return await response.json();
+    } catch (error) {
+      console.warn("Failed to parse JSON response:", error);
+      throw new Error("Invalid response format");
+    }
   }
-
+  
+  const text = await response.text();
+  if (!text) {
+    throw new Error("Empty response received");
+  }
+  
+  // Try to parse as JSON even if content-type is wrong
   try {
     return JSON.parse(text);
   } catch {
-    return text;
+    // Return as plain text if JSON parsing fails
+    return { content: text };
   }
 }
 
 /**
- * Extract PRD content from various response shapes
+ * Extract PRD content from various response formats
  */
 function extractPRDContent(data: unknown): string {
-  if (!data) {
-    throw new Error("The service returned no content.");
-  }
-
   if (typeof data === "string") {
-    const content = data.trim();
-    if (content) return content;
-    throw new Error("The service returned no content.");
+    return data;
   }
 
   if (typeof data === "object" && data !== null) {
-    const record = data as Record<string, unknown>;
+    const obj = data as Record<string, unknown>;
     
-    // Standard format: { prd: string }
-    if (record.prd && typeof record.prd === "string") {
-      return record.prd.trim();
+    // Direct prd field
+    if (typeof obj.prd === "string") {
+      return obj.prd;
     }
-
-    // Alternative format: { data: { prd: string } }
-    if (typeof record.data === "object" && record.data !== null) {
-      const nestedRecord = record.data as Record<string, unknown>;
-      if (nestedRecord.prd && typeof nestedRecord.prd === "string") {
-        return nestedRecord.prd.trim();
-      }
-    }
-
-    // OpenAI-like format
-    if (Array.isArray(record.choices) && record.choices[0]) {
-      const choice = record.choices[0] as Record<string, unknown>;
-      if (typeof choice.message === "object" && choice.message !== null) {
+    
+    // OpenAI-style response
+    if (obj.choices && Array.isArray(obj.choices)) {
+      const choice = obj.choices[0] as Record<string, unknown>;
+      if (choice.message && typeof choice.message === "object") {
         const message = choice.message as Record<string, unknown>;
-        if (message.content && typeof message.content === "string") {
-          return message.content.trim();
+        if (typeof message.content === "string") {
+          return message.content;
         }
       }
-      if (choice.text && typeof choice.text === "string") {
-        return choice.text.trim();
+      if (typeof choice.text === "string") {
+        return choice.text;
       }
+    }
+    
+    // Anthropic-style response
+    if (obj.content && Array.isArray(obj.content)) {
+      const content = obj.content[0] as Record<string, unknown>;
+      if (typeof content.text === "string") {
+        return content.text;
+      }
+    }
+    
+    // Generic content field
+    if (typeof obj.content === "string") {
+      return obj.content;
     }
   }
 
-  throw new Error("The service returned no content.");
+  throw new Error("Could not extract PRD content from response");
 }
 
 /**
- * Extract UX content from various response shapes
+ * Extract UX content from various response formats
  */
 function extractUXContent(data: unknown): string {
-  if (!data) {
-    throw new Error("The service returned no content.");
-  }
-
   if (typeof data === "string") {
-    const content = data.trim();
-    if (content) return content;
-    throw new Error("The service returned no content.");
+    return data;
   }
 
   if (typeof data === "object" && data !== null) {
-    const record = data as Record<string, unknown>;
+    const obj = data as Record<string, unknown>;
     
-    // Standard format: { ux: string }
-    if (record.ux && typeof record.ux === "string") {
-      return record.ux.trim();
+    // Direct ux field
+    if (typeof obj.ux === "string") {
+      return obj.ux;
     }
-
-    // Alternative format: { data: { ux: string } }
-    if (typeof record.data === "object" && record.data !== null) {
-      const nestedRecord = record.data as Record<string, unknown>;
-      if (nestedRecord.ux && typeof nestedRecord.ux === "string") {
-        return nestedRecord.ux.trim();
-      }
-    }
-
-    // OpenAI-like format
-    if (Array.isArray(record.choices) && record.choices[0]) {
-      const choice = record.choices[0] as Record<string, unknown>;
-      if (typeof choice.message === "object" && choice.message !== null) {
+    
+    // OpenAI-style response
+    if (obj.choices && Array.isArray(obj.choices)) {
+      const choice = obj.choices[0] as Record<string, unknown>;
+      if (choice.message && typeof choice.message === "object") {
         const message = choice.message as Record<string, unknown>;
-        if (message.content && typeof message.content === "string") {
-          return message.content.trim();
+        if (typeof message.content === "string") {
+          return message.content;
         }
       }
-      if (choice.text && typeof choice.text === "string") {
-        return choice.text.trim();
+      if (typeof choice.text === "string") {
+        return choice.text;
       }
+    }
+    
+    // Anthropic-style response
+    if (obj.content && Array.isArray(obj.content)) {
+      const content = obj.content[0] as Record<string, unknown>;
+      if (typeof content.text === "string") {
+        return content.text;
+      }
+    }
+    
+    // Generic content field
+    if (typeof obj.content === "string") {
+      return obj.content;
     }
   }
 
-  throw new Error("The service returned no content.");
+  throw new Error("Could not extract UX content from response");
 }
 
 /**
- * Extract deployment info from various response shapes
+ * Extract deployment info from response
  */
-function extractDeploymentInfo(data: unknown): { url?: string; status: "deploying" | "completed" | "failed" } {
-  if (!data) {
-    throw new Error("The service returned no content.");
+function extractDeploymentInfo(data: unknown): { url?: string; status: string } {
+  if (typeof data === "object" && data !== null) {
+    const obj = data as Record<string, unknown>;
+    return {
+      url: typeof obj.url === "string" ? obj.url : undefined,
+      status: typeof obj.status === "string" ? obj.status : "unknown",
+    };
   }
 
-  let url: string | undefined;
-  let status: "deploying" | "completed" | "failed" = "deploying";
-
-  if (typeof data === "string") {
-    const content = data.trim();
-    if (content.startsWith("http")) {
-      url = content;
-      status = "completed";
-    }
-  } else if (typeof data === "object" && data !== null) {
-    const record = data as Record<string, unknown>;
-    
-    // Extract URL from various formats
-    url = (record.url as string) || 
-          (typeof record.data === "object" && record.data !== null ? (record.data as Record<string, unknown>).url as string : undefined);
-    
-    // Extract status
-    if (typeof record.status === "string" && (record.status === "deploying" || record.status === "completed" || record.status === "failed")) {
-      status = record.status;
-    } else if (typeof record.data === "object" && record.data !== null) {
-      const nestedRecord = record.data as Record<string, unknown>;
-      if (typeof nestedRecord.status === "string" && (nestedRecord.status === "deploying" || nestedRecord.status === "completed" || nestedRecord.status === "failed")) {
-        status = nestedRecord.status;
-      }
-    } else if (url) {
-      status = "completed";
-    }
-  }
-
-  return { url, status };
+  return { status: "unknown" };
 }
 
-// Response types
 export interface PlanResponse {
   prd: string;
+  meta: {
+    provider: string;
+    model: string;
+    durationMs: number;
+    tokensUsed?: number;
+    costEstimate?: number;
+  };
 }
 
 export interface UXResponse {
   ux: string;
+  meta: {
+    provider: string;
+    model: string;
+    durationMs: number;
+    tokensUsed?: number;
+    costEstimate?: number;
+  };
 }
 
 export interface DeployResponse {
   url?: string;
-  status: "deploying" | "completed" | "failed";
+  status: 'deploying' | 'completed' | 'failed';
+  deploymentId?: string;
+  message?: string;
 }
 
 /**
@@ -325,19 +322,32 @@ This document outlines the requirements for developing a business solution that 
 - **Phase 1 (MVP):** 6-8 weeks
 - **Phase 2 (Enhancement):** 4-6 weeks
 - **Phase 3 (Scale):** Ongoing iterations`,
+      meta: {
+        provider: 'mock',
+        model: 'sample',
+        durationMs: 100,
+        tokensUsed: 0,
+        costEstimate: 0,
+      },
     };
   }
 
   try {
     const response = await fetchWithRetry("/api/plan", {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ idea: idea.trim() }),
     });
 
-    const data = await parseResponse(response);
-    const prd = extractPRDContent(data);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+    }
 
-    return { prd };
+    const data = await response.json();
+    return data as PlanResponse;
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes("fetch")) {
@@ -379,53 +389,72 @@ export async function createUX(prd: string): Promise<UXResponse> {
 ### Primary Flow: User Onboarding
 1. **Landing Page** - Clear value proposition and call-to-action
 2. **Registration** - Streamlined 3-step signup process
-3. **Profile Setup** - Guided configuration with smart defaults
-4. **Dashboard Tour** - Interactive walkthrough of key features
+3. **Dashboard Setup** - Guided tour and initial configuration
+4. **First Project** - Template-based project creation
 
-### Core Application Flow
-1. **Navigation** - Persistent sidebar with clear sections
-2. **Data Entry** - Progressive forms with inline validation
-3. **Results Display** - Interactive charts and sortable tables
-4. **Export Options** - Multiple formats (PDF, CSV, Excel)
+### Core Workflow
+1. **Project Creation** - Intuitive project setup wizard
+2. **Data Entry** - Form-based data input with validation
+3. **Review & Edit** - Real-time preview and editing capabilities
+4. **Publish & Share** - Export and sharing options
 
-## Key Screens
+## Screen Descriptions
 
 ### Dashboard
-- Header with user profile and notifications
-- Quick stats cards showing important metrics
-- Recent activity feed with timestamps
-- Primary action buttons for common tasks
+- Overview cards with key metrics
+- Recent activity feed
+- Quick action buttons
+- Navigation sidebar
 
-### Settings
-- Account management and profile editing
-- Preference controls for customization
-- Privacy and security configurations
-- Billing and subscription management
+### Project List
+- Grid/list view toggle
+- Search and filter controls
+- Project status indicators
+- Bulk action options
 
-## Mobile Experience
-- Touch-friendly interface with 44px minimum tap targets
-- Responsive grid layout adapting to screen size
-- Simplified navigation optimized for mobile
-- Gesture support for common actions
+### Project Detail
+- Tabbed interface for different views
+- Real-time collaboration indicators
+- Version history and comments
+- Export and sharing controls
 
-## Accessibility Features
-- High contrast mode for improved visibility
-- Screen reader compatibility with proper ARIA labels
-- Keyboard navigation throughout the application
-- Clear focus indicators for all interactive elements`,
+## Interaction Patterns
+- **Hover States:** Subtle animations and visual feedback
+- **Loading States:** Skeleton screens and progress indicators
+- **Error Handling:** Clear error messages with recovery actions
+- **Success Feedback:** Toast notifications and confirmation dialogs
+
+## Accessibility Considerations
+- Keyboard navigation support
+- Screen reader compatibility
+- High contrast mode support
+- Focus management and indicators`,
+      meta: {
+        provider: 'mock',
+        model: 'sample',
+        durationMs: 100,
+        tokensUsed: 0,
+        costEstimate: 0,
+      },
     };
   }
 
   try {
     const response = await fetchWithRetry("/api/ux", {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ prd: prd.trim() }),
     });
 
-    const data = await parseResponse(response);
-    const ux = extractUXContent(data);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+    }
 
-    return { ux };
+    const data = await response.json();
+    return data as UXResponse;
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes("fetch")) {
@@ -439,36 +468,47 @@ export async function createUX(prd: string): Promise<UXResponse> {
       }
       throw error;
     }
-
+    
     throw new Error("An unexpected error occurred. Please try again.");
   }
 }
 
 /**
- * Request deployment for a project
+ * Request deployment of a project
  */
-export async function requestDeploy(projectId: string): Promise<DeployResponse> {
+export async function requestDeploy(projectId: string, prd: string, ux: string): Promise<DeployResponse> {
   if (!projectId.trim()) {
     throw new Error("Project ID is required");
   }
 
-  if (isMockMode()) {
-    return {
-      url: "https://example.com/live-demo",
-      status: "completed",
-    };
+  if (!prd.trim()) {
+    throw new Error("PRD is required for deployment");
+  }
+
+  if (!ux.trim()) {
+    throw new Error("UX specification is required for deployment");
   }
 
   try {
     const response = await fetchWithRetry("/api/deploy", {
       method: "POST",
-      body: JSON.stringify({ projectId: projectId.trim() }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ 
+        projectId: projectId.trim(),
+        prd: prd.trim(),
+        ux: ux.trim()
+      }),
     });
 
-    const data = await parseResponse(response);
-    const deploymentInfo = extractDeploymentInfo(data);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+    }
 
-    return deploymentInfo;
+    const data = await response.json();
+    return data as DeployResponse;
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes("fetch")) {
@@ -482,7 +522,7 @@ export async function requestDeploy(projectId: string): Promise<DeployResponse> 
       }
       throw error;
     }
-
+    
     throw new Error("An unexpected error occurred. Please try again.");
   }
 }

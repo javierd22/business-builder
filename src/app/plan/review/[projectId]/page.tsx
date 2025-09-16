@@ -1,295 +1,246 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/app/_components/ui/Card";
-import { Button } from "@/app/_components/ui/Button";
-import { Textarea } from "@/app/_components/ui/Textarea";
-import { getProject, updateProject } from "@/lib/storage";
+import { useParams, useRouter } from "next/navigation";
+import { getProject, updateProject, getProfile } from "@/lib/storage";
 import { createUX } from "@/lib/api";
-import type { Project } from "@/lib/storage";
-
-function FriendlyErrorPanel({ 
-  error, 
-  onRetry, 
-  onEditInput, 
-  onTrySample,
-  isLoading 
-}: {
-  error: string;
-  onRetry: () => void;
-  onEditInput: () => void;
-  onTrySample: () => void;
-  isLoading: boolean;
-}) {
-  const isMockModeAvailable = process.env.NEXT_PUBLIC_MOCK_AI === "true";
-
-  return (
-    <div 
-      className="p-6 bg-brand-beige border-2 border-metal-silverLight rounded-2xl"
-      role="alert"
-    >
-      <h3 className="text-lg font-semibold text-text-DEFAULT mb-2">
-        We couldn&apos;t complete this step
-      </h3>
-      <p className="text-sm text-text-muted mb-4">
-        {error}
-      </p>
-      <div className="flex gap-3 flex-wrap">
-        <Button
-          onClick={onRetry}
-          variant="primary"
-          size="md"
-          loading={isLoading}
-          disabled={isLoading}
-        >
-          Retry
-        </Button>
-        <Button
-          onClick={onEditInput}
-          variant="secondary"
-          size="md"
-        >
-          Edit Input
-        </Button>
-        {isMockModeAvailable && (
-          <Button
-            onClick={onTrySample}
-            variant="secondary"
-            size="md"
-            disabled={isLoading}
-          >
-            Try Sample
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-}
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/_components/ui/Card";
+import { Button } from "@/app/_components/ui/Button";
+import { Project } from "@/lib/storage";
 
 export default function PlanReviewPage() {
-  const [project, setProject] = useState<Project | null>(null);
-  const [prd, setPrd] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [isLoadingProject, setIsLoadingProject] = useState(true);
-  const router = useRouter();
   const params = useParams();
+  const router = useRouter();
   const projectId = params.projectId as string;
+  
+  const [project, setProject] = useState<Project | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isGeneratingUX, setIsGeneratingUX] = useState(false);
+  const [profile, setProfile] = useState<{ persona: string; job: string } | null>(null);
 
   useEffect(() => {
-    if (projectId) {
-      const foundProject = getProject(projectId);
-      setProject(foundProject || null);
-      if (foundProject?.prd) {
-        setPrd(foundProject.prd);
-      }
-      setIsLoadingProject(false);
+    const projectData = getProject(projectId);
+    if (!projectData) {
+      setError("Project not found");
+      return;
+    }
+    setProject(projectData);
+
+    // Load profile for context
+    const userProfile = getProfile();
+    if (userProfile) {
+      setProfile({
+        persona: userProfile.persona,
+        job: userProfile.job,
+      });
     }
   }, [projectId]);
 
-  const handleGenerateUX = async () => {
-    if (!project) return;
+  async function generateUX() {
+    if (!project?.prd) return;
 
-    setError("");
-    setIsLoading(true);
+    setIsGeneratingUX(true);
+    setError(null);
 
     try {
-      // Save current PRD edits
-      const updatedPrd = prd.trim();
-      if (updatedPrd !== project.prd) {
-        updateProject(project.id, { prd: updatedPrd });
-      }
-
-      // Generate UX
-      const uxResponse = await createUX(updatedPrd);
-
-      // Update project with UX and new status
-      updateProject(project.id, {
-        ux: uxResponse.ux,
+      const result = await createUX(project.prd);
+      
+      updateProject(projectId, { 
+        ux: result.ux, 
         status: "ux_design",
+        llm: {
+          ...project.llm,
+          ux: {
+            provider: result.meta.provider,
+            model: result.meta.model,
+            durationMs: result.meta.durationMs,
+            tokensUsed: result.meta.tokensUsed,
+            costEstimate: result.meta.costEstimate,
+          }
+        }
       });
-
-      // Navigate to UX preview
-      router.push(`/ux/preview/${project.id}`);
+      
+      // Refresh project data
+      const updatedProject = getProject(projectId);
+      setProject(updatedProject);
+      
+      router.push(`/ux/preview/${projectId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred");
+      console.error("UX generation error:", err);
+      setError(err instanceof Error ? err.message : "An unexpected error occurred. Please try again.");
     } finally {
-      setIsLoading(false);
+      setIsGeneratingUX(false);
     }
-  };
+  }
 
-  const handleRetry = () => {
-    setError("");
-    handleGenerateUX();
-  };
-
-  const handleEditInput = () => {
-    setError("");
-  };
-
-  const handleTrySample = () => {
-    setError("");
+  function exportPRD() {
+    if (!project?.prd) return;
     
-    const samplePRD = `# Sample Product Requirements Document
+    const blob = new Blob([project.prd], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `prd-${projectId}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 
-## Executive Summary
-AI-powered personal finance assistant for budget management and financial planning.
-
-## Problem Statement
-Users struggle to track expenses and create effective budgets without personalized guidance.
-
-## Target Audience
-- **Primary:** Working professionals aged 25-45
-- **Secondary:** Small business owners
-- **Tertiary:** College students learning financial management
-
-## Core Features
-1. **Expense Tracking** - Automatic categorization of transactions
-2. **Budget Creation** - Smart budget templates and monitoring
-3. **Financial Advice** - Personalized recommendations and insights
-4. **Goal Setting** - Progress tracking for financial objectives
-5. **Bill Reminders** - Automated payment scheduling and alerts
-
-## Technical Requirements
-- Mobile-first responsive design
-- Real-time data synchronization
-- Bank-level security and encryption
-- Integration with financial institutions`;
-
-    setPrd(samplePRD);
-    
-    setTimeout(() => {
-      handleGenerateUX();
-    }, 100);
-  };
-
-  if (isLoadingProject) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-brand-beige py-12">
-        <div className="mx-auto max-w-4xl px-4">
-          <Card>
-            <CardContent>
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-gold border-t-transparent mx-auto mb-4" />
-                  <p className="text-text-muted">Loading project...</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="min-h-screen bg-gradient-to-br from-[#FBF9F4] via-[#F8F4ED] to-[#F5F0E8] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#F7DC6F] mx-auto mb-4"></div>
+          <p className="text-[#6B7280]">Loading project...</p>
         </div>
       </div>
     );
   }
 
-  if (!project || !project.prd) {
+  if (!project) {
     return (
-      <div className="min-h-screen bg-brand-beige py-12">
-        <div className="mx-auto max-w-2xl px-4">
-          <Card>
-            <CardHeader>
-              <CardTitle as="h1" className="text-center text-red-600">
-                PRD Not Found
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-center space-y-4">
-              <p className="text-text-muted">
-                {!project 
-                  ? "This project doesn&apos;t exist or has been deleted."
-                  : "This project doesn&apos;t have a Product Requirements Document yet."
-                }
-              </p>
-              <p className="text-sm text-text-muted">
-                Please generate an idea first to create your business plan.
-              </p>
-              <Button href="/idea" variant="primary">
-                Generate Business Idea
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-[#FBF9F4] via-[#F8F4ED] to-[#F5F0E8] flex items-center justify-center">
+        <Card className="max-w-md mx-auto">
+          <CardContent className="p-6 text-center">
+            <h2 className="text-xl font-semibold text-[#4A5568] mb-2">Project Not Found</h2>
+            <p className="text-[#6B7280] mb-4">The project you&apos;re looking for doesn&apos;t exist.</p>
+            <Button
+              onClick={() => router.push('/idea')}
+              className="bg-gradient-to-r from-[#FFF4C4] via-[#FFECB3] to-[#FFE0B2] border border-[#F7DC6F] text-[#8B7355] hover:from-[#FFF9E6] hover:via-[#FFF4C4] hover:to-[#FFECB3] hover:shadow-[0_4px_12px_rgba(247,220,111,0.4)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F7DC6F] transition-all transform hover:scale-[1.02]"
+            >
+              Start New Project
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-brand-beige py-12">
-      <div className="mx-auto max-w-4xl px-4">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle as="h1" className="text-2xl">
-                Review Product Requirements Document
-              </CardTitle>
-              <div className="flex items-center gap-2 text-sm text-text-muted">
-                <div className="h-2 w-2 rounded-full bg-brand-gold" />
-                <span>Planning Phase</span>
-              </div>
-            </div>
-            <p className="text-sm text-text-muted mt-2">
-              <strong>Project:</strong> {project.idea}
-            </p>
-          </CardHeader>
-          
-          <CardContent>
-            <div 
-              className="space-y-6"
-              aria-live="polite"
-            >
-              <Textarea
-                label="Product Requirements Document"
-                value={prd}
-                onChange={(e) => setPrd(e.target.value)}
-                rows={15}
-                helpText="Review and edit your PRD before generating the UX design. This document will guide the user experience creation."
-                disabled={isLoading}
-                className="font-mono text-sm"
-              />
+    <div className="min-h-screen bg-gradient-to-br from-[#FBF9F4] via-[#F8F4ED] to-[#F5F0E8] py-12">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-[#4A5568] mb-4">PRD Review</h1>
+          <p className="text-lg text-[#6B7280]">Review your Product Requirements Document and proceed to UX design.</p>
+        </div>
 
-              {error && (
-                <FriendlyErrorPanel
-                  error={error}
-                  onRetry={handleRetry}
-                  onEditInput={handleEditInput}
-                  onTrySample={handleTrySample}
-                  isLoading={isLoading}
-                />
-              )}
-
-              {isLoading && (
-                <div className="p-4 bg-brand-beige border border-metal-silverLight rounded-xl">
-                  <p className="text-sm text-text-muted">
-                    Creating user experience design based on your PRD...
-                  </p>
+        <div className="grid gap-8 lg:grid-cols-3">
+          {/* PRD Content */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-2xl text-[#4A5568]">Product Requirements Document</CardTitle>
+                    <CardDescription className="mt-2">
+                      Generated for: {project.idea}
+                      {profile && (
+                        <span className="block mt-1 text-sm text-[#8B7355]">
+                          📋 Tailored for <strong>{profile.persona}</strong> to <strong>{profile.job.toLowerCase()}</strong>
+                        </span>
+                      )}
+                    </CardDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={exportPRD}
+                      variant="secondary"
+                      className="border border-[#E8E9EA] bg-gradient-to-br from-[#F8F9FA] via-[#F5F6F7] to-[#F1F2F4] text-[#4A5568] hover:from-[#F1F2F4] hover:to-[#E9ECEF] hover:border-[#D1D5DB] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D1D5DB] transition-all"
+                    >
+                      Export PRD
+                    </Button>
+                  </div>
                 </div>
-              )}
-            </div>
-          </CardContent>
+              </CardHeader>
+              <CardContent>
+                <div className="prose prose-sm max-w-none">
+                  <pre className="whitespace-pre-wrap text-[#4A5568] font-sans leading-relaxed">
+                    {project.prd}
+                  </pre>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-          <CardFooter>
-            <div className="flex gap-3 w-full">
-              <Button
-                href="/idea"
-                variant="secondary"
-                size="lg"
-              >
-                ← Back to Ideas
-              </Button>
-              
-              <Button
-                onClick={handleGenerateUX}
-                variant="primary"
-                size="lg"
-                loading={isLoading}
-                disabled={isLoading || !prd.trim()}
-                className="flex-1"
-              >
-                {isLoading ? "Generating UX..." : "Generate User Experience"}
-              </Button>
-            </div>
-          </CardFooter>
-        </Card>
+          {/* Actions Sidebar */}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg text-[#4A5568]">Next Steps</CardTitle>
+                <CardDescription>
+                  Continue building your project
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button
+                  onClick={generateUX}
+                  disabled={isGeneratingUX}
+                  className="w-full bg-gradient-to-r from-[#FFF4C4] via-[#FFECB3] to-[#FFE0B2] border border-[#F7DC6F] text-[#8B7355] hover:from-[#FFF9E6] hover:via-[#FFF4C4] hover:to-[#FFECB3] hover:shadow-[0_4px_12px_rgba(247,220,111,0.4)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F7DC6F] transition-all transform hover:scale-[1.02]"
+                >
+                  {isGeneratingUX ? "Generating UX..." : "Generate UX Design"}
+                </Button>
+
+                <Button
+                  onClick={() => router.push('/idea')}
+                  variant="ghost"
+                  className="w-full text-[#6B7280] hover:text-[#D4A574] hover:bg-gradient-to-r hover:from-[#FFF9E6] hover:to-[#FFF5CC] hover:bg-clip-text hover:text-transparent transition-all"
+                >
+                  Start New Project
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* LLM Metadata */}
+            {project.llm?.plan && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm text-[#4A5568]">Generation Info</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm text-[#6B7280] space-y-1">
+                  <p>Provider: {project.llm.plan.provider}</p>
+                  <p>Model: {project.llm.plan.model}</p>
+                  <p>Duration: {(project.llm.plan.durationMs / 1000).toFixed(1)}s</p>
+                  {project.llm.plan.tokensUsed && (
+                    <p>Tokens: {project.llm.plan.tokensUsed.toLocaleString()}</p>
+                  )}
+                  {project.llm.plan.costEstimate && (
+                    <p>Cost: ${project.llm.plan.costEstimate.toFixed(4)}</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Error Display */}
+            {error && (
+              <Card className="border-red-200 bg-red-50">
+                <CardContent className="p-4">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-red-800">Error</h3>
+                      <div className="mt-2 text-sm text-red-700">{error}</div>
+                      <div className="mt-4">
+                        <Button
+                          onClick={() => setError(null)}
+                          variant="ghost"
+                          className="bg-red-50 px-2 py-1.5 text-sm font-medium text-red-800 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 focus:ring-offset-red-50"
+                        >
+                          Dismiss
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

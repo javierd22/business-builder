@@ -1,107 +1,105 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
+import { generatePlan } from '@/lib/llm/client';
+import { getClientIP, checkRateLimit } from '@/lib/rate-limit';
 
-function generateRequestId(): string {
-  return Math.random().toString(36).substring(2, 15);
-}
+const RATE_LIMIT_MAX_REQUESTS = 10;
 
-function logError(requestId: string, error: unknown, context: string) {
-  const timestamp = new Date().toISOString();
-  console.error(`[${timestamp}] [${requestId}] ${context}:`, error instanceof Error ? error.message : error);
-}
-
-export async function GET() {
-  return NextResponse.json({ 
-    ok: true, 
-    expects: "POST { idea: string }",
-    returns: "{ prd: string }"
-  }, {
-    headers: { "Content-Type": "application/json" }
-  });
-}
-
-export async function POST(req: Request) {
-  const requestId = generateRequestId();
-  const timestamp = new Date().toISOString();
-  
-  console.log(`[${timestamp}] [${requestId}] PRD generation request started`);
-  
+export async function POST(request: NextRequest) {
   try {
-    const body = await req.json();
-    const { idea } = body;
+    // Rate limiting
+    const clientIP = getClientIP(request);
+    const rateLimit = checkRateLimit(clientIP);
     
-    if (!idea || typeof idea !== "string") {
-      logError(requestId, "Missing or invalid idea parameter", "Validation");
+    if (!rateLimit.allowed) {
       return NextResponse.json(
-        { message: "Business idea is required" }, 
         { 
-          status: 400,
-          headers: { "Content-Type": "application/json" }
+          message: `Rate limit exceeded. Please try again in ${Math.ceil((rateLimit.resetTime - Date.now()) / 1000 / 60)} minutes.`,
+          retryAfter: Math.ceil((rateLimit.resetTime - Date.now()) / 1000)
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': Math.ceil((rateLimit.resetTime - Date.now()) / 1000).toString(),
+            'X-RateLimit-Limit': RATE_LIMIT_MAX_REQUESTS.toString(),
+            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+            'X-RateLimit-Reset': rateLimit.resetTime.toString(),
+          }
         }
+      );
+    }
+
+    const body = await request.json();
+    const { idea } = body;
+
+    // Input validation
+    if (!idea || typeof idea !== 'string') {
+      return NextResponse.json(
+        { message: 'Business idea is required' },
+        { status: 400 }
       );
     }
 
     if (idea.trim().length < 10) {
-      logError(requestId, `Idea too short: ${idea.length} chars`, "Validation");
       return NextResponse.json(
-        { message: "Business idea must be at least 10 characters long" }, 
-        { 
-          status: 400,
-          headers: { "Content-Type": "application/json" }
-        }
+        { message: 'Business idea must be at least 10 characters long' },
+        { status: 400 }
       );
     }
 
-    const prd = `# Product Requirements Document
+    if (idea.trim().length > 5000) {
+      return NextResponse.json(
+        { message: 'Business idea is too long (max 5000 characters)' },
+        { status: 400 }
+      );
+    }
 
-## Executive Summary
-**Business Idea:** ${idea}
+    // Basic profanity filter placeholder
+    const profanityPattern = /\b(shit|fuck|damn|hell)\b/i;
+    if (profanityPattern.test(idea)) {
+      return NextResponse.json(
+        { message: 'Please use professional language in your business idea' },
+        { status: 400 }
+      );
+    }
 
-## Problem Statement
-This document outlines the requirements for developing a business solution that addresses specific market needs and user challenges in the target domain.
+    // Generate PRD using LLM client
+    const result = await generatePlan(idea.trim());
 
-## Target Audience
-- **Primary Users:** Business professionals and entrepreneurs
-- **Secondary Users:** Stakeholders and decision makers
-- **Market Segment:** Small to medium enterprises
+    // Log successful generation
+    console.log(`[${new Date().toISOString()}] Plan generated: ${result.meta.provider}/${result.meta.model} - ${result.meta.durationMs}ms - ${result.meta.tokensUsed || 0} tokens`);
 
-## Core Features
-1. **User Authentication** - Secure login and registration system
-2. **Dashboard** - Comprehensive overview with key metrics
-3. **Data Management** - Create, read, update, and delete operations
-4. **Reporting** - Analytics and insights generation
-5. **Mobile Support** - Responsive design for all devices
+    return NextResponse.json({
+      prd: result.prd,
+      meta: result.meta,
+    });
 
-## Technical Requirements
-- **Frontend:** Modern web framework with TypeScript
-- **Backend:** RESTful API with robust validation
-- **Database:** Scalable data storage solution
-- **Security:** Industry-standard encryption and privacy
-
-## Success Metrics
-- User adoption rate: 80% within first quarter
-- System uptime: 99.9% availability
-- User satisfaction: 4.5+ star rating
-
-## Implementation Timeline
-- **Phase 1 (MVP):** 6-8 weeks
-- **Phase 2 (Enhancement):** 4-6 weeks
-- **Phase 3 (Scale):** Ongoing iterations`;
-
-    console.log(`[${timestamp}] [${requestId}] PRD generation completed successfully`);
-    
-    return NextResponse.json(
-      { prd },
-      { headers: { "Content-Type": "application/json" } }
-    );
-    
   } catch (error) {
-    logError(requestId, error, "Server Error");
-    return NextResponse.json(
-      { message: "Unable to process your request. Please try again." }, 
-      { 
-        status: 500,
-        headers: { "Content-Type": "application/json" }
+    console.error('Plan generation error:', error);
+    
+    if (error instanceof Error) {
+      if (error.message.includes('timeout')) {
+        return NextResponse.json(
+          { message: 'Request timed out. Please try again with a shorter idea.' },
+          { status: 408 }
+        );
       }
+      if (error.message.includes('API key')) {
+        return NextResponse.json(
+          { message: 'Service configuration error. Please try again later.' },
+          { status: 500 }
+        );
+      }
+      if (error.message.includes('rate limit') || error.message.includes('429')) {
+        return NextResponse.json(
+          { message: 'Too many requests. Please wait a moment before trying again.' },
+          { status: 429 }
+        );
+      }
+    }
+
+    return NextResponse.json(
+      { message: 'Failed to generate PRD. Please try again.' },
+      { status: 500 }
     );
   }
 }

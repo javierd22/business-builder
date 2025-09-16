@@ -1,177 +1,190 @@
-# Business Builder - QA Checklist
+# Business Builder - QA Guide
 
-## Full Flow Walkthrough (10 minutes)
+## Overview
 
-### 1. Landing Page
-- [ ] Navigate to the deployed app
-- [ ] Verify beige background and gold accents are visible
-- [ ] Check that navbar shows "Business Builder" with gold dot logo
-- [ ] Verify "Start Building" button is gold with proper hover state
-- [ ] Test idea input box (should navigate to `/idea` on click)
-- [ ] Confirm suggestion chips navigate to `/idea`
-- [ ] Verify trust bar shows user avatars with gold borders
+This guide provides comprehensive testing instructions for the Business Builder application with dual-provider LLM support (Anthropic Claude and OpenAI ChatGPT).
 
-### 2. Idea Submission (`/idea`)
-- [ ] Enter a business idea (minimum 10 characters)
-- [ ] Click "Generate Business Plan"
-- [ ] Verify loading state shows "Generating PRD..."
-- [ ] Confirm successful navigation to `/plan/review/[projectId]`
-- [ ] Check that PRD content is populated
+## Environment Setup
 
-### 3. PRD Review (`/plan/review/[projectId]`)
-- [ ] Verify PRD content is displayed in textarea
-- [ ] Test editing the PRD content
-- [ ] Click "Generate User Experience"
-- [ ] Verify loading state shows "Generating UX..."
-- [ ] Confirm navigation to `/ux/preview/[projectId]`
+### Required Environment Variables
 
-### 4. UX Preview (`/ux/preview/[projectId]`)
-- [ ] Verify UX content is displayed
-- [ ] Check "Ready to Deploy?" information box
-- [ ] Click "Deploy App"
-- [ ] Verify loading state shows "Deploying App..."
-- [ ] Confirm navigation to `/deploy/[projectId]`
+Create a `.env.local` file in the project root with these variables:
 
-### 5. Deployment Status (`/deploy/[projectId]`)
-- [ ] Verify deployment status is shown correctly
-- [ ] If completed, check "Your Business App is Live!" message
-- [ ] Test "View Live App" button (should open in new tab)
-- [ ] Verify project navigation buttons work
+```bash
+# LLM Provider Configuration
+LLM_PROVIDER=anthropic  # or 'openai'
+ANTHROPIC_API_KEY=your_anthropic_key_here
+OPENAI_API_KEY=your_openai_key_here
+ANTHROPIC_MODEL=claude-3-5-sonnet-latest
+OPENAI_MODEL=gpt-4o-mini
+LLM_TIMEOUT_MS=60000
 
-## Palette Compliance Check
+# Public Configuration
+NEXT_PUBLIC_MOCK_AI=true  # Set to false for real AI calls
+NEXT_PUBLIC_SHOW_BUILD_INFO=true
+```
 
-### Gold (#D4AF37)
-- [ ] Primary buttons use gold background
-- [ ] Logo dot is gold
-- [ ] Hero accent word "reality" is gold
-- [ ] Suggestion chip hover states show gold borders
-- [ ] Focus rings are gold throughout
+### Vercel Deployment Setup
 
-### Gold Dark (#B4891E)
-- [ ] Button hover states use darker gold
-- [ ] Active button states are darker gold
+1. **Go to Vercel Dashboard** → Your Project → Settings → Environment Variables
+2. **Add these variables:**
+   - `LLM_PROVIDER` = `anthropic` (Preview + Production)
+   - `ANTHROPIC_API_KEY` = `your_key` (Server only)
+   - `OPENAI_API_KEY` = `your_key` (Server only)
+   - `ANTHROPIC_MODEL` = `claude-3-5-sonnet-latest`
+   - `OPENAI_MODEL` = `gpt-4o-mini`
+   - `LLM_TIMEOUT_MS` = `60000`
+   - `NEXT_PUBLIC_MOCK_AI` = `true` (Preview only, for demos)
+   - `NEXT_PUBLIC_SHOW_BUILD_INFO` = `true`
 
-### Beige (#F4EDE2)
-- [ ] Page backgrounds are beige
-- [ ] Error panel backgrounds are beige
+3. **Redeploy** → Clear build cache → Confirm new SHA in BuildInfo badge
 
-### Silver (#C0C7D0) & Silver Light (#E5E9EF)
-- [ ] Card borders use silver light
-- [ ] Input borders use silver light
-- [ ] Loading skeleton uses silver light
+## 5-Minute Smoke Test
 
-### Text Colors
-- [ ] Headings use text-DEFAULT (#1F2937)
-- [ ] Body text uses text-muted (#6B7280)
-- [ ] All text has sufficient contrast
+### Test 1: Mock Mode (No API Keys Required)
 
-## Error Simulation & Resilience
+1. **Start the app** with `NEXT_PUBLIC_MOCK_AI=true`
+2. **Navigate to** `/idea`
+3. **Enter a business idea:** "A mobile app for tracking daily habits"
+4. **Click "Generate PRD"** → Should complete instantly with sample content
+5. **Verify PRD page** shows mock content with "Generated with mock/sample" metadata
+6. **Click "Generate UX Design"** → Should complete instantly
+7. **Verify UX page** shows mock content with metadata
+8. **Click "Deploy Project"** → Should show deployment status
 
-### Network Error Testing
-- [ ] Disconnect internet during PRD generation
-- [ ] Verify friendly error panel appears with "We couldn't complete this step"
-- [ ] Check "Retry" button works when connection restored
-- [ ] Test "Edit Input" button returns to form
-- [ ] Verify "Try Sample" button (if mock mode available)
+**Expected Results:**
+- All steps complete in < 2 seconds
+- Content is deterministic and professional
+- Metadata shows "mock" provider
+- No API calls made
 
-### Validation Testing
-- [ ] Submit idea with less than 10 characters
-- [ ] Verify validation error appears
-- [ ] Test empty form submission
-- [ ] Confirm error states are user-friendly
+### Test 2: Real Anthropic Provider
 
-## Mock Mode Testing
+1. **Set environment variables:**
+   ```bash
+   LLM_PROVIDER=anthropic
+   ANTHROPIC_API_KEY=your_real_key
+   NEXT_PUBLIC_MOCK_AI=false
+   ```
 
-### Enable Mock Mode
-- [ ] Set `NEXT_PUBLIC_MOCK_AI=true` in environment
-- [ ] Verify immediate completion without network calls
-- [ ] Check "Using sample content" indicators appear
-- [ ] Test full flow completes in under 5 seconds
-- [ ] Verify sample PRD and UX content is realistic
+2. **Redeploy** and verify BuildInfo shows new SHA
 
-## Accessibility Check
+3. **Repeat Test 1** with real API calls
 
-### Keyboard Navigation
-- [ ] Tab through all interactive elements
-- [ ] Verify focus rings are visible (gold)
-- [ ] Test Enter/Space activation on buttons
-- [ ] Confirm form can be submitted with keyboard
+**Expected Results:**
+- PRD generation takes 5-15 seconds
+- Content is unique and detailed
+- Metadata shows "anthropic" provider with real model
+- Cost estimates appear in metadata
 
-### Screen Reader
-- [ ] Check aria-live regions update properly
-- [ ] Verify error messages have role="alert"
-- [ ] Test form labels are associated correctly
-- [ ] Confirm loading states are announced
+### Test 3: Real OpenAI Provider
 
-## Build & Deployment Verification
+1. **Set environment variables:**
+   ```bash
+   LLM_PROVIDER=openai
+   OPENAI_API_KEY=your_real_key
+   NEXT_PUBLIC_MOCK_AI=false
+   ```
 
-### BuildInfo Badge
-- [ ] Verify badge appears in bottom-right corner
-- [ ] Check environment shows correctly (production/preview/development)
-- [ ] Confirm SHA updates after each deployment
-- [ ] Test badge can be hidden with `NEXT_PUBLIC_SHOW_BUILD_INFO=false`
+2. **Redeploy** and verify BuildInfo shows new SHA
 
-### Deployment Process
-- [ ] Push changes to main branch
-- [ ] Monitor Vercel deployment dashboard
-- [ ] Verify no build errors or warnings
-- [ ] Confirm production URL serves latest version
-- [ ] Test hard refresh clears any caching issues
+3. **Repeat Test 1** with real API calls
 
-### Post-Deployment
-- [ ] Verify BuildInfo SHA matches latest commit
-- [ ] Test "Promote to Production" if using preview
-- [ ] Confirm all API routes respond correctly
-- [ ] Check error boundary works in production
+**Expected Results:**
+- PRD generation takes 3-10 seconds
+- Content is unique and detailed
+- Metadata shows "openai" provider with real model
+- Cost estimates appear in metadata
 
-## Browser Compatibility
+## Error Simulation Tests
 
-### Desktop Testing
-- [ ] Chrome (latest): Full functionality
-- [ ] Safari (latest): All features work
-- [ ] Firefox (latest): No layout issues
-- [ ] Edge (latest): Complete workflow
+### Test 4: Network Error Simulation
 
-### Mobile Testing
-- [ ] Mobile Safari: Touch interactions work
-- [ ] Chrome Mobile: Responsive layout correct
-- [ ] Test portrait and landscape orientations
-- [ ] Verify touch targets are minimum 44px
+1. **Disconnect from internet**
+2. **Try to generate PRD** with real provider
+3. **Expected:** Friendly error message with retry option
+4. **Reconnect and retry** → Should work
 
-## Performance Check
+### Test 5: Invalid Input Testing
 
-### Loading Times
-- [ ] Initial page load under 3 seconds
-- [ ] Route transitions are smooth
-- [ ] Images load progressively
-- [ ] No layout shift during loading
+1. **Test short ideas** (< 10 characters)
+   - **Expected:** "Business idea must be at least 10 characters long"
 
-### Skeleton Loading
-- [ ] Loading states appear immediately
-- [ ] Skeleton matches actual content layout
-- [ ] Smooth transition from skeleton to content
-- [ ] No flicker or jumpiness
+2. **Test empty ideas**
+   - **Expected:** "Business idea is required"
 
-## Final Acceptance Criteria
+3. **Test very long ideas** (> 5000 characters)
+   - **Expected:** "Business idea is too long (max 5000 characters)"
 
-### Must Pass All
-- [ ] Complete Idea → PRD → UX → Deploy flow works
-- [ ] No "Invalid response..." strings anywhere
-- [ ] All error messages are friendly and actionable
-- [ ] Gold focus rings visible throughout
-- [ ] Mock mode provides instant completion
-- [ ] BuildInfo updates with each deployment
-- [ ] No console errors in production
-- [ ] TypeScript compilation is clean
-- [ ] ESLint passes with no errors
+4. **Test profanity** (if implemented)
+   - **Expected:** "Please use professional language"
 
-### Browser Matrix Minimum
-- [ ] Chrome ✅
-- [ ] Safari ✅  
-- [ ] Mobile Safari ✅
+### Test 6: Rate Limiting
 
----
+1. **Make 10+ rapid requests** to `/api/plan`
+2. **Expected:** 429 status with retry-after header
+3. **Wait for reset** → Should work again
 
-**QA Completion Time:** ~10 minutes for full walkthrough
-**Critical Path:** Landing → Idea → PRD → UX → Deploy
-**Pass Criteria:** All checkboxes completed without blocking issues
+## Settings Page Testing
+
+### Test 7: Settings UI
+
+1. **Navigate to** `/settings`
+2. **Verify display shows:**
+   - Current provider (anthropic/openai)
+   - Current model
+   - Mock mode status
+   - Build info visibility
+   - API key status (configured/not required)
+
+3. **Test quick action buttons:**
+   - Vercel Dashboard (opens in new tab)
+   - Anthropic Console (opens in new tab)
+   - OpenAI Platform (opens in new tab)
+   - Refresh Settings (reloads page)
+
+## API Endpoint Testing
+
+### Test 8: Direct API Testing
+
+**Test Plan Generation:**
+```bash
+curl -X POST http://localhost:3000/api/plan \
+  -H "Content-Type: application/json" \
+  -d '{"idea": "A web app for managing team projects"}'
+```
+
+**Expected Response:**
+```json
+{
+  "prd": "# Product Requirements Document...",
+  "meta": {
+    "provider": "anthropic",
+    "model": "claude-3-5-sonnet-latest",
+    "durationMs": 5000,
+    "tokensUsed": 1500,
+    "costEstimate": 0.0045
+  }
+}
+```
+
+## Success Criteria
+
+✅ **All tests pass** with both providers
+✅ **Mock mode works** without API keys
+✅ **Real providers work** with valid keys
+✅ **Error handling** is user-friendly
+✅ **Rate limiting** prevents abuse
+✅ **Settings page** shows correct info
+✅ **BuildInfo** updates on deployment
+✅ **No API keys** exposed to client
+✅ **TypeScript** compiles without errors
+✅ **Beige/gold styling** is consistent
+
+## Privacy Notes
+
+- **Only business idea text** is sent to LLM providers
+- **No personal information** is collected or stored
+- **API keys** never leave the server
+- **Project data** is stored locally in browser only
+- **No tracking** or analytics beyond basic usage

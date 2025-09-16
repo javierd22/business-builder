@@ -1,119 +1,105 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
+import { generateUX } from '@/lib/llm/client';
+import { getClientIP, checkRateLimit } from '@/lib/rate-limit';
 
-function generateRequestId(): string {
-  return Math.random().toString(36).substring(2, 15);
-}
+const RATE_LIMIT_MAX_REQUESTS = 10;
 
-function logError(requestId: string, error: unknown, context: string) {
-  const timestamp = new Date().toISOString();
-  console.error(`[${timestamp}] [${requestId}] ${context}:`, error instanceof Error ? error.message : error);
-}
-
-export async function GET() {
-  return NextResponse.json({ 
-    ok: true, 
-    expects: "POST { prd: string }",
-    returns: "{ ux: string }"
-  }, {
-    headers: { "Content-Type": "application/json" }
-  });
-}
-
-export async function POST(req: Request) {
-  const requestId = generateRequestId();
-  const timestamp = new Date().toISOString();
-  
-  console.log(`[${timestamp}] [${requestId}] UX generation request started`);
-  
+export async function POST(request: NextRequest) {
   try {
-    const body = await req.json();
-    const { prd } = body;
+    // Rate limiting
+    const clientIP = getClientIP(request);
+    const rateLimit = checkRateLimit(clientIP);
     
-    if (!prd || typeof prd !== "string") {
-      logError(requestId, "Missing or invalid prd parameter", "Validation");
+    if (!rateLimit.allowed) {
       return NextResponse.json(
-        { message: "Product Requirements Document is required" }, 
         { 
-          status: 400,
-          headers: { "Content-Type": "application/json" }
+          message: `Rate limit exceeded. Please try again in ${Math.ceil((rateLimit.resetTime - Date.now()) / 1000 / 60)} minutes.`,
+          retryAfter: Math.ceil((rateLimit.resetTime - Date.now()) / 1000)
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': Math.ceil((rateLimit.resetTime - Date.now()) / 1000).toString(),
+            'X-RateLimit-Limit': RATE_LIMIT_MAX_REQUESTS.toString(),
+            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+            'X-RateLimit-Reset': rateLimit.resetTime.toString(),
+          }
         }
+      );
+    }
+
+    const body = await request.json();
+    const { prd } = body;
+
+    // Input validation
+    if (!prd || typeof prd !== 'string') {
+      return NextResponse.json(
+        { message: 'Product Requirements Document is required' },
+        { status: 400 }
       );
     }
 
     if (prd.trim().length < 50) {
-      logError(requestId, `PRD too short: ${prd.length} chars`, "Validation");
       return NextResponse.json(
-        { message: "Product Requirements Document must be more detailed" }, 
-        { 
-          status: 400,
-          headers: { "Content-Type": "application/json" }
-        }
+        { message: 'PRD must be at least 50 characters long' },
+        { status: 400 }
       );
     }
 
-    const ux = `# User Experience Design
+    if (prd.trim().length > 50000) {
+      return NextResponse.json(
+        { message: 'PRD is too long (max 50000 characters)' },
+        { status: 400 }
+      );
+    }
 
-## Design Principles
-- **Simplicity:** Clean, intuitive interface design
-- **Accessibility:** WCAG 2.1 AA compliance throughout
-- **Consistency:** Unified design language and patterns
-- **Performance:** Fast loading times and smooth interactions
+    // Basic profanity filter placeholder
+    const profanityPattern = /\b(shit|fuck|damn|hell)\b/i;
+    if (profanityPattern.test(prd)) {
+      return NextResponse.json(
+        { message: 'Please use professional language in your PRD' },
+        { status: 400 }
+      );
+    }
 
-## User Flows
+    // Generate UX using LLM client
+    const result = await generateUX(prd.trim());
 
-### Primary Flow: User Onboarding
-1. **Landing Page** - Clear value proposition and call-to-action
-2. **Registration** - Streamlined 3-step signup process
-3. **Profile Setup** - Guided configuration with smart defaults
-4. **Dashboard Tour** - Interactive walkthrough of key features
+    // Log successful generation
+    console.log(`[${new Date().toISOString()}] UX generated: ${result.meta.provider}/${result.meta.model} - ${result.meta.durationMs}ms - ${result.meta.tokensUsed || 0} tokens`);
 
-### Core Application Flow
-1. **Navigation** - Persistent sidebar with clear sections
-2. **Data Entry** - Progressive forms with inline validation
-3. **Results Display** - Interactive charts and sortable tables
-4. **Export Options** - Multiple formats (PDF, CSV, Excel)
+    return NextResponse.json({
+      ux: result.ux,
+      meta: result.meta,
+    });
 
-## Key Screens
-
-### Dashboard
-- Header with user profile and notifications
-- Quick stats cards showing important metrics
-- Recent activity feed with timestamps
-- Primary action buttons for common tasks
-
-### Settings
-- Account management and profile editing
-- Preference controls for customization
-- Privacy and security configurations
-- Billing and subscription management
-
-## Mobile Experience
-- Touch-friendly interface with 44px minimum tap targets
-- Responsive grid layout adapting to screen size
-- Simplified navigation optimized for mobile
-- Gesture support for common actions
-
-## Accessibility Features
-- High contrast mode for improved visibility
-- Screen reader compatibility with proper ARIA labels
-- Keyboard navigation throughout the application
-- Clear focus indicators for all interactive elements`;
-
-    console.log(`[${timestamp}] [${requestId}] UX generation completed successfully`);
-    
-    return NextResponse.json(
-      { ux },
-      { headers: { "Content-Type": "application/json" } }
-    );
-    
   } catch (error) {
-    logError(requestId, error, "Server Error");
-    return NextResponse.json(
-      { message: "Unable to process your request. Please try again." }, 
-      { 
-        status: 500,
-        headers: { "Content-Type": "application/json" }
+    console.error('UX generation error:', error);
+    
+    if (error instanceof Error) {
+      if (error.message.includes('timeout')) {
+        return NextResponse.json(
+          { message: 'Request timed out. Please try again with a shorter PRD.' },
+          { status: 408 }
+        );
       }
+      if (error.message.includes('API key')) {
+        return NextResponse.json(
+          { message: 'Service configuration error. Please try again later.' },
+          { status: 500 }
+        );
+      }
+      if (error.message.includes('rate limit') || error.message.includes('429')) {
+        return NextResponse.json(
+          { message: 'Too many requests. Please wait a moment before trying again.' },
+          { status: 429 }
+        );
+      }
+    }
+
+    return NextResponse.json(
+      { message: 'Failed to generate UX specification. Please try again.' },
+      { status: 500 }
     );
   }
 }

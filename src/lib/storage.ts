@@ -11,6 +11,29 @@ export interface Project {
   status: "draft" | "planning" | "ux_design" | "deploying" | "completed" | "failed";
   createdAt: string;
   updatedAt: string;
+  llm?: {
+    plan?: {
+      provider: string;
+      model: string;
+      durationMs: number;
+      tokensUsed?: number;
+      costEstimate?: number;
+    };
+    ux?: {
+      provider: string;
+      model: string;
+      durationMs: number;
+      tokensUsed?: number;
+      costEstimate?: number;
+    };
+  };
+}
+
+export interface Profile {
+  persona: string;
+  job: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /**
@@ -143,6 +166,96 @@ export function deleteProject(id: string): boolean {
   
   saveProjects(filteredProjects);
   return true;
+}
+
+// ===== PROFILE STORAGE FUNCTIONS =====
+
+/**
+ * Get user profile from localStorage
+ */
+export function getProfile(): Profile | null {
+  if (!isClient()) return null;
+  
+  try {
+    const profileData = localStorage.getItem('profile');
+    if (!profileData) return null;
+    
+    const profile = JSON.parse(profileData) as Profile;
+    
+    // Validate required fields
+    if (!profile.persona || !profile.job || !profile.createdAt || !profile.updatedAt) {
+      console.warn('Invalid profile data, clearing...');
+      localStorage.removeItem('profile');
+      return null;
+    }
+    
+    return profile;
+  } catch (error) {
+    console.warn('Failed to parse profile from localStorage:', error);
+    localStorage.removeItem('profile');
+    return null;
+  }
+}
+
+/**
+ * Save user profile to localStorage
+ */
+export function saveProfile(profile: Omit<Profile, 'createdAt' | 'updatedAt'>): Profile {
+  if (!isClient()) {
+    throw new Error('Profile can only be saved on the client side');
+  }
+  
+  const now = new Date().toISOString();
+  const existingProfile = getProfile();
+  
+  const newProfile: Profile = {
+    ...profile,
+    createdAt: existingProfile?.createdAt || now,
+    updatedAt: now,
+  };
+  
+  try {
+    localStorage.setItem('profile', JSON.stringify(newProfile));
+    return newProfile;
+  } catch (error) {
+    console.error('Failed to save profile to localStorage:', error);
+    throw new Error('Failed to save profile');
+  }
+}
+
+/**
+ * Update user profile
+ */
+export function updateProfile(updates: Partial<Omit<Profile, 'createdAt' | 'updatedAt'>>): Profile | null {
+  if (!isClient()) return null;
+  
+  const existingProfile = getProfile();
+  if (!existingProfile) {
+    throw new Error('No existing profile to update');
+  }
+  
+  const updatedProfile = {
+    ...existingProfile,
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  };
+  
+  return saveProfile(updatedProfile);
+}
+
+/**
+ * Clear user profile
+ */
+export function clearProfile(): boolean {
+  if (!isClient()) return false;
+  
+  try {
+    localStorage.removeItem('profile');
+    return true;
+  } catch (error) {
+    console.error('Failed to clear profile from localStorage:', error);
+    return false;
+  }
 }
 
 /**

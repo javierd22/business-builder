@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import IdeaBox from "./_components/IdeaBox";
+import OnboardingPrompt from "./_components/OnboardingPrompt";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -59,6 +60,8 @@ export default function Page() {
           <p className="mx-auto mt-6 max-w-2xl text-center text-[#6B7280]">
             Transform your business ideas into structured plans and professional presentations in minutes.
           </p>
+
+          <OnboardingPrompt />
 
           <IdeaBox />
 

@@ -1,207 +1,182 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardHeader, CardTitle, CardContent } from "@/app/_components/ui/Card";
-import { Button } from "@/app/_components/ui/Button";
-import { Textarea } from "@/app/_components/ui/Textarea";
-import { addProject, updateProject } from "@/lib/storage";
+import { addProject, updateProject, getProfile } from "@/lib/storage";
 import { createPlan } from "@/lib/api";
-
-function FriendlyErrorPanel({ 
-  error, 
-  onRetry, 
-  onEditInput, 
-  onTrySample,
-  isLoading 
-}: {
-  error: string;
-  onRetry: () => void;
-  onEditInput: () => void;
-  onTrySample: () => void;
-  isLoading: boolean;
-}) {
-  const isMockModeAvailable = process.env.NEXT_PUBLIC_MOCK_AI === "true";
-
-  return (
-    <div 
-      className="p-6 bg-brand-beige border-2 border-metal-silverLight rounded-2xl"
-      role="alert"
-    >
-      <h3 className="text-lg font-semibold text-text-DEFAULT mb-2">
-        We couldn&apos;t complete this step
-      </h3>
-      <p className="text-sm text-text-muted mb-4">
-        {error}
-      </p>
-      <div className="flex gap-3 flex-wrap">
-        <Button
-          onClick={onRetry}
-          variant="primary"
-          size="md"
-          loading={isLoading}
-          disabled={isLoading}
-        >
-          Retry
-        </Button>
-        <Button
-          onClick={onEditInput}
-          variant="secondary"
-          size="md"
-        >
-          Edit Input
-        </Button>
-        {isMockModeAvailable && (
-          <Button
-            onClick={onTrySample}
-            variant="secondary"
-            size="md"
-            disabled={isLoading}
-          >
-            Try Sample
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-}
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/_components/ui/Card";
+import { Textarea } from "@/app/_components/ui/Textarea";
+import { Button } from "@/app/_components/ui/Button";
 
 export default function IdeaPage() {
   const [idea, setIdea] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<{ persona: string; job: string } | null>(null);
   const router = useRouter();
 
-  const validateIdea = (idea: string): string | null => {
-    if (!idea.trim()) {
-      return "Please describe your business idea";
-    }
-    if (idea.trim().length < 10) {
-      return "Business idea must be at least 10 characters long";
-    }
-    return null;
-  };
+  const suggestions = [
+    "E-commerce platform for local artisans",
+    "Task management app for remote teams",
+    "Analytics dashboard for small businesses",
+    "Learning management system for online courses",
+    "Customer support ticketing system",
+  ];
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  useEffect(() => {
+    const userProfile = getProfile();
+    if (userProfile) {
+      setProfile({
+        persona: userProfile.persona,
+        job: userProfile.job,
+      });
+    }
+  }, []);
+
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError("");
+    setError(null);
 
-    const validationError = validateIdea(idea);
-    if (validationError) {
-      setError(validationError);
+    if (!idea.trim() || idea.trim().length < 10) {
+      setError("Please describe your idea with at least 10 characters.");
       return;
     }
 
     setIsLoading(true);
-
     try {
-      // Create project in localStorage with draft status
-      const project = addProject({ idea: idea.trim() });
+      const newProject = addProject({ idea });
+      const result = await createPlan(idea);
 
-      // Generate PRD
-      const planResponse = await createPlan(idea.trim());
-
-      // Update project with PRD and planning status
-      updateProject(project.id, {
-        prd: planResponse.prd,
+      // Update project with PRD and LLM metadata
+      updateProject(newProject.id, { 
+        prd: result.prd, 
         status: "planning",
+        llm: {
+          plan: {
+            provider: result.meta.provider,
+            model: result.meta.model,
+            durationMs: result.meta.durationMs,
+            tokensUsed: result.meta.tokensUsed,
+            costEstimate: result.meta.costEstimate,
+          }
+        }
       });
-
-      // Navigate to PRD review
-      router.push(`/plan/review/${project.id}`);
+      
+      router.push(`/plan/review/${newProject.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred");
+      console.error("Idea submission error:", err);
+      setError(err instanceof Error ? err.message : "An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleRetry = () => {
-    setError("");
-    handleSubmit({ preventDefault: () => {} } as React.FormEvent);
-  };
-
-  const handleEditInput = () => {
-    setError("");
-  };
-
-  const handleTrySample = () => {
-    setError("");
-    setIdea("AI-powered personal finance assistant that helps users track expenses, create budgets, and receive personalized financial advice based on their spending patterns and financial goals.");
-    
-    setTimeout(() => {
-      handleSubmit({ preventDefault: () => {} } as React.FormEvent);
-    }, 100);
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-brand-beige py-12">
-      <div className="mx-auto max-w-2xl px-4">
-        <Card>
-          <CardHeader>
-            <CardTitle as="h1" className="text-center text-2xl">
-              Describe Your Business Idea
-            </CardTitle>
-          </CardHeader>
-          
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <Textarea
-                label="What&apos;s your business idea?"
-                placeholder="Describe your business concept, target market, and what problem you&apos;re solving..."
-                value={idea}
-                onChange={(e) => setIdea(e.target.value)}
-                rows={6}
-                helpText="Provide as much detail as possible to get a comprehensive business plan (minimum 10 characters)"
-                disabled={isLoading}
-                error={error && !error.includes("couldn't") ? error : undefined}
-              />
+    <div className="min-h-screen bg-gradient-to-br from-[#FBF9F4] via-[#F8F4ED] to-[#F5F0E8] py-12">
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-[#4A5568] mb-4">
+            What&apos;s your business idea?
+          </h1>
+          <p className="text-lg text-[#6B7280] max-w-2xl mx-auto">
+            Describe your business concept and we&apos;ll help you create a comprehensive product requirements document.
+          </p>
+          {profile && (
+            <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#F7DC6F] bg-gradient-to-br from-[#FFF9E6] to-[#FFF5CC] px-4 py-2 text-sm text-[#8B7355] shadow-[0_2px_8px_rgba(247,220,111,0.2)]">
+              <div className="h-2 w-2 rounded-full bg-green-500"></div>
+              <span>
+                Tailored for <strong>{profile.persona}</strong> looking to <strong>{profile.job.toLowerCase()}</strong>
+              </span>
+            </div>
+          )}
+        </div>
 
-              <div 
-                className="space-y-4"
-                aria-live="polite"
-              >
+        <Card className="max-w-3xl mx-auto">
+          <CardHeader>
+            <CardTitle className="text-2xl text-[#4A5568]">Business Idea</CardTitle>
+            <CardDescription>
+              Be as detailed as possible. The more context you provide, the better your PRD will be.
+              {profile && (
+                <span className="block mt-2 text-sm text-[#8B7355]">
+                  💡 As a {profile.persona.toLowerCase()}, focus on how this idea helps you {profile.job.toLowerCase()}.
+                </span>
+              )}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={onSubmit} className="space-y-6">
+              <div>
+                <Textarea
+                  value={idea}
+                  onChange={(e) => setIdea(e.target.value)}
+                  placeholder={
+                    profile 
+                      ? `As a ${profile.persona.toLowerCase()}, I want to create a business that helps me ${profile.job.toLowerCase()}. For example...`
+                      : "Describe your business idea in detail..."
+                  }
+                  rows={6}
+                  className="w-full"
+                  disabled={isLoading}
+                />
+                <p className="text-sm text-[#6B7280] mt-2">
+                  {idea.length}/5000 characters
+                </p>
+              </div>
+
+              {error && (
+                <div className="rounded-lg border-2 border-red-200 bg-red-50 p-4" role="alert">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-red-800">Error</h3>
+                      <div className="mt-2 text-sm text-red-700">{error}</div>
+                      <div className="mt-4">
+                        <div className="-mx-2 -my-1.5 flex">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => setError(null)}
+                            className="bg-red-50 px-2 py-1.5 text-sm font-medium text-red-800 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 focus:ring-offset-red-50"
+                          >
+                            Dismiss
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end">
                 <Button
                   type="submit"
-                  variant="primary"
-                  size="lg"
-                  loading={isLoading}
-                  disabled={isLoading}
-                  className="w-full"
+                  disabled={isLoading || idea.trim().length < 10}
+                  className="bg-gradient-to-r from-[#FFF4C4] via-[#FFECB3] to-[#FFE0B2] border border-[#F7DC6F] text-[#8B7355] hover:from-[#FFF9E6] hover:via-[#FFF4C4] hover:to-[#FFECB3] hover:shadow-[0_4px_12px_rgba(247,220,111,0.4)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F7DC6F] transition-all transform hover:scale-[1.02]"
                 >
-                  {isLoading ? "Generating PRD..." : "Generate Business Plan"}
+                  {isLoading ? "Generating PRD..." : "Generate PRD"}
                 </Button>
-
-                {error && error.includes("couldn't") && (
-                  <FriendlyErrorPanel
-                    error={error}
-                    onRetry={handleRetry}
-                    onEditInput={handleEditInput}
-                    onTrySample={handleTrySample}
-                    isLoading={isLoading}
-                  />
-                )}
-
-                {isLoading && (
-                  <div className="p-4 bg-brand-beige border border-metal-silverLight rounded-xl">
-                    <p className="text-sm text-text-muted">
-                      Analyzing your business idea and generating a comprehensive Product Requirements Document...
-                    </p>
-                  </div>
-                )}
               </div>
             </form>
 
-            <div className="mt-8 pt-6 border-t border-metal-silverLight">
-              <h3 className="text-sm font-medium text-text-DEFAULT mb-3">
-                Quick Tips for Better Results:
-              </h3>
-              <ul className="text-sm text-text-muted space-y-1">
-                <li>• Be specific about your target audience</li>
-                <li>• Describe the problem you&apos;re solving</li>
-                <li>• Mention your unique value proposition</li>
-                <li>• Include any business model ideas</li>
-              </ul>
+            <div className="mt-6">
+              <p className="text-sm text-[#6B7280] mb-3">Need inspiration? Try one of these:</p>
+              <div className="flex flex-wrap gap-2">
+                {suggestions.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    onClick={() => setIdea(suggestion)}
+                    className="rounded-full border border-[#E8E9EA] bg-gradient-to-br from-white via-[#FEFEFE] to-[#FCFCFC] px-3 py-1 text-sm text-[#4A5568] shadow-[0_1px_3px_rgba(0,0,0,0.05)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:border-[#F7DC6F] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F7DC6F] font-medium"
+                    disabled={isLoading}
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>
