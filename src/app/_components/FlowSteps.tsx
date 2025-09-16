@@ -45,7 +45,6 @@ const STEPS = [
 ];
 
 export default function FlowSteps({ currentStep, projectId }: FlowStepsProps) {
-  const pathname = usePathname();
   
   const getStepStatus = (stepId: string, index: number): "completed" | "current" | "upcoming" => {
     const currentIndex = STEPS.findIndex(step => step.id === currentStep);

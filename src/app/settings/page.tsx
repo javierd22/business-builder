@@ -32,7 +32,7 @@ const JOBS = [
 export default function SettingsPage() {
   const [settings, setSettings] = useState<SettingsData | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [telemetry, setTelemetry] = useState<any>(null);
+  const [telemetry, setTelemetry] = useState<ReturnType<typeof getTelemetrySummary> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [error, setError] = useState<string | null>(null);

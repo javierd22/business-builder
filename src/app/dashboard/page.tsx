@@ -5,14 +5,13 @@ import Link from "next/link";
 import { getProjects } from "@/lib/storage";
 import { getGlobalInsights, getRecentProjectInsights, formatDuration } from "@/lib/insights";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/_components/ui/Card";
-import { Button } from "@/app/_components/ui/Button";
 import { EmptyStates } from "@/app/_components/EmptyState";
 import { Project } from "@/lib/storage";
 
 export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [insights, setInsights] = useState<any>(null);
-  const [recentInsights, setRecentInsights] = useState<any[]>([]);
+  const [insights, setInsights] = useState<ReturnType<typeof getGlobalInsights> | null>(null);
+  const [recentInsights, setRecentInsights] = useState<ReturnType<typeof getRecentProjectInsights>>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

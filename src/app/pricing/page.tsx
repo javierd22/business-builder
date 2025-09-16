@@ -94,7 +94,7 @@ export default function PricingPage() {
     );
   }
 
-  const handleCtaClick = async (tier: string, cta: string) => {
+  const handleCtaClick = async (tier: string) => {
     setIsLoading(true);
     
     try {
@@ -244,7 +244,7 @@ export default function PricingPage() {
               Ready to build your business?
             </h2>
             <p className="text-lg text-[#6B7280] mb-6">
-              Start with our free plan and upgrade when you're ready for more features.
+              Start with our free plan and upgrade when you&apos;re ready for more features.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link

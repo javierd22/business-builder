@@ -17,7 +17,7 @@ export default function UXPreviewPage() {
   const projectId = params.projectId as string;
   
   const [project, setProject] = useState<Project | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  // const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDeploying, setIsDeploying] = useState(false);
   const [profile, setProfile] = useState<{ persona: string; job: string } | null>(null);

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generatePlan } from '@/lib/llm/client';
 import { getClientIP, checkRateLimit } from '@/lib/rate-limit';
-import { buildPRDPrompt, buildMockPRD } from '@/lib/prompts';
+// import { buildPRDPrompt, buildMockPRD } from '@/lib/prompts';
 
 const RATE_LIMIT_MAX_REQUESTS = 10;
 

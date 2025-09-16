@@ -6,7 +6,7 @@ import { addProject } from "@/lib/storage";
 import { validateProjectJSON } from "@/lib/export";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/_components/ui/Card";
 import { Button } from "@/app/_components/ui/Button";
-import { EmptyStates } from "@/app/_components/EmptyState";
+// import { EmptyStates } from "@/app/_components/EmptyState";
 
 export default function ImportPage() {
   const [isDragOver, setIsDragOver] = useState(false);
@@ -211,9 +211,9 @@ export default function ImportPage() {
               <h4 className="font-medium text-[#8B7355] mb-2">How to import a project:</h4>
               <ol className="list-decimal list-inside space-y-1 text-xs">
                 <li>Export a project from Business Builder as JSON</li>
-                <li>Drag and drop the JSON file here, or click "Browse Files"</li>
+                <li>Drag and drop the JSON file here, or click &quot;Browse Files&quot;</li>
                 <li>The project will be imported with a new ID to avoid conflicts</li>
-                <li>You'll be redirected to the project automatically</li>
+                <li>You&apos;ll be redirected to the project automatically</li>
               </ol>
             </div>
           </CardContent>

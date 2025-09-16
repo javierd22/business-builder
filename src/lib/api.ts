@@ -138,7 +138,7 @@ async function parseResponse(response: Response): Promise<unknown> {
 /**
  * Extract PRD content from various response formats
  */
-function extractPRDContent(data: unknown): string {
+// function extractPRDContent(data: unknown): string {
   if (typeof data === "string") {
     return data;
   }

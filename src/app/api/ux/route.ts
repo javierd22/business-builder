@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateUX } from '@/lib/llm/client';
 import { getClientIP, checkRateLimit } from '@/lib/rate-limit';
-import { buildUXPrompt, buildMockUX } from '@/lib/prompts';
+// import { buildUXPrompt, buildMockUX } from '@/lib/prompts';
 
 const RATE_LIMIT_MAX_REQUESTS = 10;
 

@@ -27,7 +27,6 @@ export interface UXResult {
  * Generate a Product Requirements Document
  */
 export async function generatePlan(idea: string, persona?: string, job?: string): Promise<PlanResult> {
-  const startTime = Date.now();
   
   if (isMockMode()) {
     return {
@@ -61,7 +60,6 @@ export async function generatePlan(idea: string, persona?: string, job?: string)
  * Generate a UX specification
  */
 export async function generateUX(prd: string, persona?: string, job?: string): Promise<UXResult> {
-  const startTime = Date.now();
   
   if (isMockMode()) {
     return {
@@ -324,6 +322,7 @@ async function generateUXWithOpenAI(
 /**
  * Generate mock PRD for demo purposes
  */
+/*
 function generateMockPRD(idea: string): string {
   return `# Product Requirements Document
 
@@ -372,10 +371,12 @@ The current market lacks a streamlined solution that effectively addresses the c
 - **Resource Risk:** Medium - requires skilled development team
 - **Timeline Risk:** Low - well-defined scope and requirements`;
 }
+*/
 
 /**
  * Generate mock UX specification for demo purposes
  */
+/*
 function generateMockUX(prd: string): string {
   return `# User Experience Design
 
@@ -448,11 +449,12 @@ function generateMockUX(prd: string): string {
 - **Empty States:** Helpful illustrations and guidance
 - **Permission Errors:** Clear explanation and next steps`;
 }
+*/
 
 /**
  * Calculate cost estimate for Anthropic usage
  */
-function calculateAnthropicCost(usage: any, model: string): number {
+function calculateAnthropicCost(usage: unknown, model: string): number {
   if (!usage) return 0;
   
   // Rough cost estimates (per 1M tokens)
@@ -472,7 +474,7 @@ function calculateAnthropicCost(usage: any, model: string): number {
 /**
  * Calculate cost estimate for OpenAI usage
  */
-function calculateOpenAICost(usage: any, model: string): number {
+function calculateOpenAICost(usage: unknown, model: string): number {
   if (!usage) return 0;
   
   // Rough cost estimates (per 1M tokens)

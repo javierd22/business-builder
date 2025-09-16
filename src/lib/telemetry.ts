@@ -5,7 +5,7 @@
 interface TelemetryEvent {
   event: string;
   timestamp: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
 }
 
 interface TelemetryData {
@@ -65,7 +65,7 @@ function saveTelemetryData(data: TelemetryData): void {
 /**
  * Track an event
  */
-export function trackEvent(event: string, data?: Record<string, any>): void {
+export function trackEvent(event: string, data?: Record<string, unknown>): void {
   if (!isClient()) return;
 
   const telemetryData = getTelemetryData();

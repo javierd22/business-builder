@@ -2,7 +2,7 @@
  * Success criteria tracking and mini insights
  */
 
-import { Project } from './storage';
+// import { Project } from './storage';
 
 export interface ProjectMilestone {
   projectId: string;
@@ -77,8 +77,7 @@ function saveMilestones(milestones: ProjectMilestone[]): void {
  */
 export function recordMilestone(
   projectId: string,
-  milestone: ProjectMilestone['milestone'],
-  idea?: string
+  milestone: ProjectMilestone['milestone']
 ): void {
   if (!isClient()) return;
 

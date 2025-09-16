@@ -259,7 +259,7 @@ function convertMarkdownToHTML(markdown: string): string {
 /**
  * Validate imported project JSON
  */
-export function validateProjectJSON(jsonData: any): { valid: boolean; project?: Project; error?: string } {
+export function validateProjectJSON(jsonData: unknown): { valid: boolean; project?: Project; error?: string } {
   try {
     if (!jsonData || typeof jsonData !== 'object') {
       return { valid: false, error: 'Invalid JSON format' };
