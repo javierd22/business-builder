@@ -1,46 +1,73 @@
-// src/app/error.tsx
 "use client";
 
-import { useEffect } from "react";
-import Link from "next/link";
+import React, { useEffect } from "react";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/app/_components/ui/Card";
+import { Button } from "@/app/_components/ui/Button";
 
-export default function Error({
-  error,
-  reset,
-}: {
+interface ErrorProps {
   error: Error & { digest?: string };
   reset: () => void;
-}) {
+}
+
+export default function Error({ error, reset }: ErrorProps) {
   useEffect(() => {
-    // Log for debugging (Vercel Functions / browser console in dev)
-    console.error(error);
+    // Log the error to an error reporting service
+    console.error("Global error boundary caught:", error);
   }, [error]);
 
   return (
-    <main className="flex min-h-[60vh] items-center justify-center px-4">
-      <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-semibold text-gray-900">Something went wrong</h1>
-        <p className="mt-2 text-gray-600">
-          An error occurred while rendering this page. You can try again or go back home.
-        </p>
-        {error?.digest ? (
-          <p className="mt-2 text-xs text-gray-500">Digest: {error.digest}</p>
-        ) : null}
-        <div className="mt-6 flex gap-3">
-          <button
-            onClick={() => reset()}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-          >
-            Try again
-          </button>
-          <Link
-            href="/"
-            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800 shadow-sm hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-          >
-            Go home
-          </Link>
-        </div>
+    <div className="min-h-screen bg-[#F4EDE2] flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <Card>
+          <CardHeader className="text-center">
+            <div className="text-6xl mb-4">😔</div>
+            <CardTitle as="h1" className="text-red-600">
+              Something went wrong
+            </CardTitle>
+          </CardHeader>
+          
+          <CardContent className="text-center space-y-4">
+            <p className="text-[#6B7280]">
+              We encountered an unexpected error while processing your request. 
+              This has been logged and our team will investigate.
+            </p>
+            
+            <p className="text-sm text-[#6B7280]">
+              You can try again, or if the problem persists, please contact support.
+            </p>
+
+            {error.digest && (
+              <div className="bg-gray-50 border border-[#E5E9EF] rounded-lg p-3">
+                <p className="text-xs text-[#6B7280] font-mono">
+                  Error ID: {error.digest}
+                </p>
+              </div>
+            )}
+          </CardContent>
+
+          <CardFooter>
+            <div className="flex gap-3 w-full">
+              <Button
+                onClick={reset}
+                variant="primary"
+                size="large"
+                className="flex-1"
+              >
+                Try Again
+              </Button>
+              
+              <Button
+                href="/"
+                variant="secondary"
+                size="large"
+                className="flex-1"
+              >
+                Go Home
+              </Button>
+            </div>
+          </CardFooter>
+        </Card>
       </div>
-    </main>
+    </div>
   );
 }
