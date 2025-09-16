@@ -24,18 +24,18 @@ export default function IdeaBox() {
   }
 
   return (
-    <div className="mx-auto mt-10 max-w-3xl rounded-2xl border-2 border-[#C0C4CC] bg-white/95 p-3 shadow-[0_20px_40px_rgba(0,0,0,0.1)] backdrop-blur">
+    <div className="mx-auto mt-10 max-w-3xl rounded-2xl border-2 border-[#E8E9EA] bg-gradient-to-br from-white via-[#FEFEFE] to-[#FCFCFC] p-3 shadow-[0_8px_32px_rgba(0,0,0,0.06)] backdrop-blur">
       <form onSubmit={onSubmit} className="relative" aria-label="Describe your business idea">
         <textarea
           value={idea}
           onChange={(e) => setIdea(e.target.value)}
           placeholder="What do you want to build?"
           rows={3}
-          className="w-full resize-y rounded-xl border-2 border-[#C0C4CC] bg-white p-4 pr-14 text-[#2D1B02] shadow-inner placeholder:text-[#8B7355] focus:outline-none focus:border-[#FFD700] focus-visible:ring-2 focus-visible:ring-[#FFD700] transition-all"
+          className="w-full resize-y rounded-xl border-2 border-[#E8E9EA] bg-gradient-to-br from-white via-[#FEFEFE] to-[#FCFCFC] p-4 pr-14 text-[#4A5568] shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#F7DC6F] focus-visible:ring-2 focus-visible:ring-[#F7DC6F] focus:shadow-[inset_0_2px_4px_rgba(0,0,0,0.02),0_0_0_3px_rgba(247,220,111,0.1)] transition-all"
         />
         <button
           type="submit"
-          className="absolute bottom-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r from-[#FFD700] via-[#FFA500] to-[#FF8C00] text-[#2D1B02] shadow-lg hover:from-[#FFED4E] hover:via-[#FFD700] hover:to-[#FFA500] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FFD700] transition-all transform hover:scale-110 font-bold text-lg"
+          className="absolute bottom-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r from-[#FFF4C4] via-[#FFECB3] to-[#FFE0B2] border border-[#F7DC6F] text-[#8B7355] shadow-[0_4px_16px_rgba(247,220,111,0.25)] hover:from-[#FFF9E6] hover:via-[#FFF4C4] hover:to-[#FFECB3] hover:shadow-[0_6px_20px_rgba(247,220,111,0.35)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F7DC6F] transition-all transform hover:scale-110 font-bold text-lg"
           aria-label="Submit idea"
           title="Submit idea"
         >
@@ -43,15 +43,15 @@ export default function IdeaBox() {
         </button>
       </form>
 
-      <div className="mt-3 rounded-xl bg-gradient-to-br from-[#F8F9FA] to-[#E9ECEF] p-3 border border-[#C0C4CC]">
-        <p className="mb-2 text-xs text-[#5D4E37] font-medium">Not sure where to start? Try one of these:</p>
+      <div className="mt-3 rounded-xl bg-gradient-to-br from-[#F8F9FA] via-[#F5F6F7] to-[#F1F2F4] p-3 border border-[#E8E9EA] shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+        <p className="mb-2 text-xs text-[#6B7280] font-medium">Not sure where to start? Try one of these:</p>
         <div className="flex flex-wrap gap-2">
           {suggestions.map((s) => (
             <button
               key={s}
               type="button"
               onClick={() => setIdea(s)}
-              className="rounded-full border border-[#C0C4CC] bg-gradient-to-br from-white to-[#F8F9FA] px-3 py-1 text-sm text-[#2D1B02] shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-[#FFD700] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FFD700] font-medium"
+              className="rounded-full border border-[#E8E9EA] bg-gradient-to-br from-white via-[#FEFEFE] to-[#FCFCFC] px-3 py-1 text-sm text-[#4A5568] shadow-[0_1px_3px_rgba(0,0,0,0.05)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:border-[#F7DC6F] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F7DC6F] font-medium"
             >
               {s}
             </button>
