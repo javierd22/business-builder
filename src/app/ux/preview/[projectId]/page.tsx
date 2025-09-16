@@ -7,6 +7,9 @@ import { requestDeploy } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/_components/ui/Card";
 import { Button } from "@/app/_components/ui/Button";
 import { Project } from "@/lib/storage";
+import FlowSteps from "@/app/_components/FlowSteps";
+import { EmptyStates } from "@/app/_components/EmptyState";
+import { exportUXAsMarkdown, exportUXAsPDF, exportProjectAsJSON } from "@/lib/export";
 
 export default function UXPreviewPage() {
   const params = useParams();
@@ -60,18 +63,19 @@ export default function UXPreviewPage() {
     }
   }
 
-  function exportUX() {
+  function handleExportUXMarkdown() {
     if (!project?.ux) return;
-    
-    const blob = new Blob([project.ux], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `ux-${projectId}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    exportUXAsMarkdown(project.ux, project.idea);
+  }
+
+  function handleExportUXPDF() {
+    if (!project?.ux) return;
+    exportUXAsPDF(project.ux, project.idea);
+  }
+
+  function handleExportProject() {
+    if (!project) return;
+    exportProjectAsJSON(project);
   }
 
   if (isLoading) {
@@ -87,25 +91,37 @@ export default function UXPreviewPage() {
 
   if (!project) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#FBF9F4] via-[#F8F4ED] to-[#F5F0E8] flex items-center justify-center">
-        <Card className="max-w-md mx-auto">
-          <CardContent className="p-6 text-center">
-            <h2 className="text-xl font-semibold text-[#4A5568] mb-2">Project Not Found</h2>
-            <p className="text-[#6B7280] mb-4">The project you&apos;re looking for doesn&apos;t exist.</p>
-            <Button
-              onClick={() => router.push('/idea')}
-              className="bg-gradient-to-r from-[#FFF4C4] via-[#FFECB3] to-[#FFE0B2] border border-[#F7DC6F] text-[#8B7355] hover:from-[#FFF9E6] hover:via-[#FFF4C4] hover:to-[#FFECB3] hover:shadow-[0_4px_12px_rgba(247,220,111,0.4)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F7DC6F] transition-all transform hover:scale-[1.02]"
-            >
-              Start New Project
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gradient-to-br from-[#FBF9F4] via-[#F8F4ED] to-[#F5F0E8] py-12">
+        <FlowSteps currentStep="ux" projectId={projectId} />
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <Card>
+            <CardContent>
+              {EmptyStates.projectNotFound}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (!project.ux) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#FBF9F4] via-[#F8F4ED] to-[#F5F0E8] py-12">
+        <FlowSteps currentStep="ux" projectId={projectId} />
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <Card>
+            <CardContent>
+              {EmptyStates.noUX}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FBF9F4] via-[#F8F4ED] to-[#F5F0E8] py-12">
+      <FlowSteps currentStep="ux" projectId={projectId} />
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-[#4A5568] mb-4">UX Preview</h1>
@@ -131,11 +147,25 @@ export default function UXPreviewPage() {
                   </div>
                   <div className="flex gap-2">
                     <Button
-                      onClick={exportUX}
+                      onClick={handleExportUXMarkdown}
                       variant="secondary"
                       className="border border-[#E8E9EA] bg-gradient-to-br from-[#F8F9FA] via-[#F5F6F7] to-[#F1F2F4] text-[#4A5568] hover:from-[#F1F2F4] hover:to-[#E9ECEF] hover:border-[#D1D5DB] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D1D5DB] transition-all"
                     >
-                      Export UX
+                      Export UX (.md)
+                    </Button>
+                    <Button
+                      onClick={handleExportUXPDF}
+                      variant="secondary"
+                      className="border border-[#E8E9EA] bg-gradient-to-br from-[#F8F9FA] via-[#F5F6F7] to-[#F1F2F4] text-[#4A5568] hover:from-[#F1F2F4] hover:to-[#E9ECEF] hover:border-[#D1D5DB] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D1D5DB] transition-all"
+                    >
+                      Export UX (.pdf)
+                    </Button>
+                    <Button
+                      onClick={handleExportProject}
+                      variant="secondary"
+                      className="border border-[#E8E9EA] bg-gradient-to-br from-[#F8F9FA] via-[#F5F6F7] to-[#F1F2F4] text-[#4A5568] hover:from-[#F1F2F4] hover:to-[#E9ECEF] hover:border-[#D1D5DB] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D1D5DB] transition-all"
+                    >
+                      Export Project (.json)
                     </Button>
                   </div>
                 </div>

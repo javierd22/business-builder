@@ -255,6 +255,12 @@ export interface PlanResponse {
   };
 }
 
+export interface PlanRequest {
+  idea: string;
+  persona?: string;
+  job?: string;
+}
+
 export interface UXResponse {
   ux: string;
   meta: {
@@ -264,6 +270,12 @@ export interface UXResponse {
     tokensUsed?: number;
     costEstimate?: number;
   };
+}
+
+export interface UXRequest {
+  prd: string;
+  persona?: string;
+  job?: string;
 }
 
 export interface DeployResponse {
@@ -276,7 +288,7 @@ export interface DeployResponse {
 /**
  * Create a business plan from an idea
  */
-export async function createPlan(idea: string): Promise<PlanResponse> {
+export async function createPlan(idea: string, persona?: string, job?: string): Promise<PlanResponse> {
   if (!idea.trim()) {
     throw new Error("Business idea is required");
   }
@@ -338,7 +350,11 @@ This document outlines the requirements for developing a business solution that 
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ idea: idea.trim() }),
+      body: JSON.stringify({ 
+        idea: idea.trim(),
+        persona: persona?.trim(),
+        job: job?.trim()
+      }),
     });
 
     if (!response.ok) {
@@ -369,7 +385,7 @@ This document outlines the requirements for developing a business solution that 
 /**
  * Create UX design from a PRD
  */
-export async function createUX(prd: string): Promise<UXResponse> {
+export async function createUX(prd: string, persona?: string, job?: string): Promise<UXResponse> {
   if (!prd.trim()) {
     throw new Error("Product Requirements Document is required");
   }
@@ -445,7 +461,11 @@ export async function createUX(prd: string): Promise<UXResponse> {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ prd: prd.trim() }),
+      body: JSON.stringify({ 
+        prd: prd.trim(),
+        persona: persona?.trim(),
+        job: job?.trim()
+      }),
     });
 
     if (!response.ok) {

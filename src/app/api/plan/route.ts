@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generatePlan } from '@/lib/llm/client';
 import { getClientIP, checkRateLimit } from '@/lib/rate-limit';
+import { buildPRDPrompt, buildMockPRD } from '@/lib/prompts';
 
 const RATE_LIMIT_MAX_REQUESTS = 10;
 
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { idea } = body;
+    const { idea, persona, job } = body;
 
     // Input validation
     if (!idea || typeof idea !== 'string') {
@@ -62,8 +63,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate PRD using LLM client
-    const result = await generatePlan(idea.trim());
+    // Generate PRD using LLM client with persona/job context
+    const result = await generatePlan(idea.trim(), persona?.trim(), job?.trim());
 
     // Log successful generation
     console.log(`[${new Date().toISOString()}] Plan generated: ${result.meta.provider}/${result.meta.model} - ${result.meta.durationMs}ms - ${result.meta.tokensUsed || 0} tokens`);

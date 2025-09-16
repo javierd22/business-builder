@@ -3,6 +3,7 @@
  */
 
 import { getEnvConfig, getServerApiKeys, isMockMode } from '../env';
+import { buildPRDPrompt, buildUXPrompt, buildMockPRD, buildMockUX } from '../prompts';
 
 export interface ProviderMeta {
   provider: string;
@@ -25,12 +26,12 @@ export interface UXResult {
 /**
  * Generate a Product Requirements Document
  */
-export async function generatePlan(idea: string): Promise<PlanResult> {
+export async function generatePlan(idea: string, persona?: string, job?: string): Promise<PlanResult> {
   const startTime = Date.now();
   
   if (isMockMode()) {
     return {
-      prd: generateMockPRD(idea),
+      prd: buildMockPRD({ idea, persona, job }),
       meta: {
         provider: 'mock',
         model: 'sample',
@@ -46,9 +47,9 @@ export async function generatePlan(idea: string): Promise<PlanResult> {
 
   try {
     if (config.provider === 'anthropic') {
-      return await generatePlanWithAnthropic(idea, anthropicApiKey, config.anthropicModel, config.timeoutMs);
+      return await generatePlanWithAnthropic(idea, anthropicApiKey, config.anthropicModel, config.timeoutMs, persona, job);
     } else {
-      return await generatePlanWithOpenAI(idea, openaiApiKey, config.openaiModel, config.timeoutMs);
+      return await generatePlanWithOpenAI(idea, openaiApiKey, config.openaiModel, config.timeoutMs, persona, job);
     }
   } catch (error) {
     console.error('Plan generation error:', error);
@@ -59,12 +60,12 @@ export async function generatePlan(idea: string): Promise<PlanResult> {
 /**
  * Generate a UX specification
  */
-export async function generateUX(prd: string): Promise<UXResult> {
+export async function generateUX(prd: string, persona?: string, job?: string): Promise<UXResult> {
   const startTime = Date.now();
   
   if (isMockMode()) {
     return {
-      ux: generateMockUX(prd),
+      ux: buildMockUX({ idea: prd, persona, job }),
       meta: {
         provider: 'mock',
         model: 'sample',
@@ -80,9 +81,9 @@ export async function generateUX(prd: string): Promise<UXResult> {
 
   try {
     if (config.provider === 'anthropic') {
-      return await generateUXWithAnthropic(prd, anthropicApiKey, config.anthropicModel, config.timeoutMs);
+      return await generateUXWithAnthropic(prd, anthropicApiKey, config.anthropicModel, config.timeoutMs, persona, job);
     } else {
-      return await generateUXWithOpenAI(prd, openaiApiKey, config.openaiModel, config.timeoutMs);
+      return await generateUXWithOpenAI(prd, openaiApiKey, config.openaiModel, config.timeoutMs, persona, job);
     }
   } catch (error) {
     console.error('UX generation error:', error);
@@ -97,23 +98,13 @@ async function generatePlanWithAnthropic(
   idea: string,
   apiKey: string,
   model: string,
-  timeoutMs: number
+  timeoutMs: number,
+  persona?: string,
+  job?: string
 ): Promise<PlanResult> {
   const startTime = Date.now();
   
-  const systemPrompt = `You are a senior product strategist. Generate a comprehensive Product Requirements Document (PRD) for the given business idea.
-
-Return the PRD as structured markdown with these sections:
-- Executive Summary
-- Problem Statement
-- Target Audience
-- Value Proposition
-- Core Features (5-7 key features)
-- Success Metrics
-- Implementation Timeline
-- Risk Assessment
-
-Be concise but thorough. Focus on business value and user needs.`;
+  const systemPrompt = buildPRDPrompt({ idea, persona, job });
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -166,23 +157,13 @@ async function generatePlanWithOpenAI(
   idea: string,
   apiKey: string,
   model: string,
-  timeoutMs: number
+  timeoutMs: number,
+  persona?: string,
+  job?: string
 ): Promise<PlanResult> {
   const startTime = Date.now();
   
-  const systemPrompt = `You are a senior product strategist. Generate a comprehensive Product Requirements Document (PRD) for the given business idea.
-
-Return the PRD as structured markdown with these sections:
-- Executive Summary
-- Problem Statement
-- Target Audience
-- Value Proposition
-- Core Features (5-7 key features)
-- Success Metrics
-- Implementation Timeline
-- Risk Assessment
-
-Be concise but thorough. Focus on business value and user needs.`;
+  const systemPrompt = buildPRDPrompt({ idea, persona, job });
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -232,22 +213,13 @@ async function generateUXWithAnthropic(
   prd: string,
   apiKey: string,
   model: string,
-  timeoutMs: number
+  timeoutMs: number,
+  persona?: string,
+  job?: string
 ): Promise<UXResult> {
   const startTime = Date.now();
   
-  const systemPrompt = `You are a senior UX designer. Generate a comprehensive UX specification based on the provided PRD.
-
-Return the UX spec as structured markdown with these sections:
-- Design Principles
-- Information Architecture
-- Primary User Flows
-- Screen Descriptions (5-7 key screens)
-- Interaction Patterns
-- Accessibility Considerations
-- Edge Cases and Error States
-
-Be detailed but practical. Focus on user experience and usability.`;
+  const systemPrompt = buildUXPrompt({ idea: prd, persona, job });
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -300,22 +272,13 @@ async function generateUXWithOpenAI(
   prd: string,
   apiKey: string,
   model: string,
-  timeoutMs: number
+  timeoutMs: number,
+  persona?: string,
+  job?: string
 ): Promise<UXResult> {
   const startTime = Date.now();
   
-  const systemPrompt = `You are a senior UX designer. Generate a comprehensive UX specification based on the provided PRD.
-
-Return the UX spec as structured markdown with these sections:
-- Design Principles
-- Information Architecture
-- Primary User Flows
-- Screen Descriptions (5-7 key screens)
-- Interaction Patterns
-- Accessibility Considerations
-- Edge Cases and Error States
-
-Be detailed but practical. Focus on user experience and usability.`;
+  const systemPrompt = buildUXPrompt({ idea: prd, persona, job });
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',

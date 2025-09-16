@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/app/_com
 import { Button } from "@/app/_components/ui/Button";
 import { getProject } from "@/lib/storage";
 import type { Project } from "@/lib/storage";
+import FlowSteps from "@/app/_components/FlowSteps";
 
 export default function DeployPage() {
   const [project, setProject] = useState<Project | null>(null);
@@ -104,6 +105,7 @@ export default function DeployPage() {
 
   return (
     <div className="min-h-screen bg-brand-beige py-12">
+      <FlowSteps currentStep="deploy" projectId={projectId} />
       <div className="mx-auto max-w-4xl px-4">
         <Card>
           <CardHeader>

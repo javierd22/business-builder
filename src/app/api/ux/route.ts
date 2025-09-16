@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateUX } from '@/lib/llm/client';
 import { getClientIP, checkRateLimit } from '@/lib/rate-limit';
+import { buildUXPrompt, buildMockUX } from '@/lib/prompts';
 
 const RATE_LIMIT_MAX_REQUESTS = 10;
 
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { prd } = body;
+    const { prd, persona, job } = body;
 
     // Input validation
     if (!prd || typeof prd !== 'string') {
@@ -62,8 +63,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate UX using LLM client
-    const result = await generateUX(prd.trim());
+    // Generate UX using LLM client with persona/job context
+    const result = await generateUX(prd.trim(), persona?.trim(), job?.trim());
 
     // Log successful generation
     console.log(`[${new Date().toISOString()}] UX generated: ${result.meta.provider}/${result.meta.model} - ${result.meta.durationMs}ms - ${result.meta.tokensUsed || 0} tokens`);

@@ -4,9 +4,12 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { addProject, updateProject, getProfile } from "@/lib/storage";
 import { createPlan } from "@/lib/api";
+import { Telemetry } from "@/lib/telemetry";
+import { recordMilestone } from "@/lib/insights";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/_components/ui/Card";
 import { Textarea } from "@/app/_components/ui/Textarea";
 import { Button } from "@/app/_components/ui/Button";
+import FlowSteps from "@/app/_components/FlowSteps";
 
 export default function IdeaPage() {
   const [idea, setIdea] = useState("");
@@ -45,7 +48,12 @@ export default function IdeaPage() {
     setIsLoading(true);
     try {
       const newProject = addProject({ idea });
-      const result = await createPlan(idea);
+      Telemetry.ideaCreated();
+      recordMilestone(newProject.id, 'idea_created', idea);
+      
+      const result = await createPlan(idea, profile?.persona, profile?.job);
+      Telemetry.prdGenerated();
+      recordMilestone(newProject.id, 'prd_generated');
 
       // Update project with PRD and LLM metadata
       updateProject(newProject.id, { 
@@ -73,6 +81,7 @@ export default function IdeaPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FBF9F4] via-[#F8F4ED] to-[#F5F0E8] py-12">
+      <FlowSteps currentStep="idea" />
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-[#4A5568] mb-4">

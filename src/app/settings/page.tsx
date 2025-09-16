@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app
 import { Button } from "@/app/_components/ui/Button";
 import { getProfile, updateProfile } from "@/lib/storage";
 import { Profile } from "@/lib/storage";
+import { getTelemetrySummary } from "@/lib/telemetry";
 
 interface SettingsData {
   provider: string;
@@ -31,6 +32,7 @@ const JOBS = [
 export default function SettingsPage() {
   const [settings, setSettings] = useState<SettingsData | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [telemetry, setTelemetry] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +58,10 @@ export default function SettingsPage() {
     // Load profile from localStorage
     const userProfile = getProfile();
     setProfile(userProfile);
+
+    // Load telemetry data
+    const telemetryData = getTelemetrySummary();
+    setTelemetry(telemetryData);
 
     fetchSettings();
   }, []);
@@ -221,6 +227,56 @@ export default function SettingsPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Telemetry Section */}
+        {telemetry && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="text-2xl text-[#4A5568]">Usage Analytics</CardTitle>
+              <CardDescription>
+                Local usage statistics (stored in your browser only)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-6 md:grid-cols-2">
+                <div>
+                  <h3 className="text-lg font-semibold text-[#4A5568] mb-4">Activity Counters</h3>
+                  <div className="space-y-2">
+                    {Object.entries(telemetry.counters).map(([key, value]) => (
+                      <div key={key} className="flex justify-between items-center p-2 rounded-lg bg-gradient-to-br from-[#F8F9FA] via-[#F5F6F7] to-[#F1F2F4] border border-[#E8E9EA]">
+                        <span className="text-sm text-[#4A5568] capitalize">
+                          {key.replace(/_/g, ' ')}
+                        </span>
+                        <span className="text-sm font-medium text-[#8B7355]">
+                          {value as number}
+                        </span>
+                      </div>
+                    ))}
+                    {Object.keys(telemetry.counters).length === 0 && (
+                      <p className="text-sm text-[#6B7280] italic">No activity recorded yet</p>
+                    )}
+                  </div>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold text-[#4A5568] mb-4">Summary</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center p-2 rounded-lg bg-gradient-to-br from-[#FFF9E6] to-[#FFF5CC] border border-[#F7DC6F]">
+                      <span className="text-sm text-[#4A5568]">Total Events</span>
+                      <span className="text-sm font-medium text-[#8B7355]">{telemetry.totalEvents}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded-lg bg-gradient-to-br from-[#F8F9FA] via-[#F5F6F7] to-[#F1F2F4] border border-[#E8E9EA]">
+                      <span className="text-sm text-[#4A5568]">Last Updated</span>
+                      <span className="text-sm font-medium text-[#8B7355]">
+                        {new Date(telemetry.lastUpdated).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid gap-6 md:grid-cols-2">
           {/* LLM Provider Settings */}
