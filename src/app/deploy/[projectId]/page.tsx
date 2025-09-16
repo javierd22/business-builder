@@ -10,6 +10,7 @@ import type { Project } from "@/lib/storage";
 export default function DeployPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [isLoadingProject, setIsLoadingProject] = useState(true);
+  const [isMockDemo, setIsMockDemo] = useState(false);
   const params = useParams();
   const projectId = params.projectId as string;
 
@@ -18,6 +19,11 @@ export default function DeployPage() {
       const foundProject = getProject(projectId);
       setProject(foundProject || null);
       setIsLoadingProject(false);
+
+      // Check if this is a mock demo URL
+      if (foundProject?.deploymentLink === "https://example.com/live-demo") {
+        setIsMockDemo(true);
+      }
     }
   }, [projectId]);
 
@@ -127,6 +133,16 @@ export default function DeployPage() {
                   <p className="text-[#6B7280]">
                     Congratulations! Your business application has been successfully deployed and is now accessible to users.
                   </p>
+                  
+                  {/* Mock Mode Indicator */}
+                  {isMockDemo && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        ℹ️ This is a demonstration URL using sample content
+                      </p>
+                    </div>
+                  )}
+
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <p className="text-sm text-green-800 mb-3">
                       <strong>Live URL:</strong>

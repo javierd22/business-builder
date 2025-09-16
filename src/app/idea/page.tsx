@@ -12,6 +12,7 @@ export default function IdeaPage() {
   const [idea, setIdea] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [lastResult, setLastResult] = useState<{ isMocked?: boolean } | null>(null);
   const router = useRouter();
 
   const validateIdea = (idea: string): string | null => {
@@ -27,6 +28,7 @@ export default function IdeaPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setLastResult(null);
 
     const validationError = validateIdea(idea);
     if (validationError) {
@@ -43,20 +45,16 @@ export default function IdeaPage() {
       // Generate PRD
       const planResponse = await createPlan(idea.trim());
 
-      if (planResponse.prd) {
-        // Update project with PRD and new status
-        updateProject(project.id, {
-          prd: planResponse.prd,
-          status: "planning",
-        });
+      // Update project with PRD and new status
+      updateProject(project.id, {
+        prd: planResponse.prd,
+        status: "planning",
+      });
 
-        // Navigate to PRD review
-        router.push(`/plan/review/${project.id}`);
-      } else if (planResponse.message) {
-        throw new Error(planResponse.message);
-      } else {
-        throw new Error("Failed to generate business plan");
-      }
+      setLastResult(planResponse);
+
+      // Navigate to PRD review
+      router.push(`/plan/review/${project.id}`);
     } catch (err) {
       console.error("Error generating plan:", err);
       setError(err instanceof Error ? err.message : "An unexpected error occurred");
@@ -68,6 +66,16 @@ export default function IdeaPage() {
   const handleRetry = () => {
     setError("");
     handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+  };
+
+  const handleTrySample = async () => {
+    setError("");
+    setIdea("AI-powered personal finance assistant that helps users track expenses, create budgets, and receive personalized financial advice based on their spending patterns and financial goals.");
+    
+    // Auto-submit with sample idea
+    setTimeout(() => {
+      handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+    }, 100);
   };
 
   return (
@@ -83,11 +91,10 @@ export default function IdeaPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <Textarea
                 label="What&apos;s your business idea?"
-                placeholder="Describe your business concept, target market, and what problem you're solving..."
+                placeholder="Describe your business concept, target market, and what problem you&apos;re solving..."
                 value={idea}
                 onChange={(e) => setIdea(e.target.value)}
                 rows={6}
-                error={error}
                 helpText="Provide as much detail as possible to get a comprehensive business plan (minimum 10 characters)"
                 disabled={isLoading}
                 aria-describedby={error ? undefined : "idea-help"}
@@ -102,7 +109,7 @@ export default function IdeaPage() {
                   disabled={isLoading}
                   className="flex-1"
                 >
-                  {isLoading ? "Generating PRD..." : "Generate Business Plan"}
+                  {isLoading ? "Generating Business Plan..." : "Generate Business Plan"}
                 </Button>
 
                 {error && (
@@ -118,13 +125,53 @@ export default function IdeaPage() {
                 )}
               </div>
 
+              {/* Friendly Error Panel */}
               {error && (
                 <div 
-                  className="p-4 bg-red-50 border border-red-200 rounded-lg"
+                  className="p-6 bg-[#F4EDE2] border-2 border-[#E5E9EF] rounded-xl"
                   role="alert"
                   aria-live="polite"
                 >
-                  <p className="text-sm text-red-800">{error}</p>
+                  <h3 className="text-lg font-semibold text-[#1F2937] mb-2">
+                    We couldn&apos;t complete this step
+                  </h3>
+                  <p className="text-sm text-[#6B7280] mb-4">
+                    {error}
+                  </p>
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={handleRetry}
+                      variant="primary"
+                      size="large"
+                      disabled={isLoading}
+                    >
+                      Try Again
+                    </Button>
+                    <Button
+                      onClick={() => setError("")}
+                      variant="secondary"
+                      size="large"
+                    >
+                      Edit Input
+                    </Button>
+                    <Button
+                      onClick={handleTrySample}
+                      variant="secondary"
+                      size="large"
+                      disabled={isLoading}
+                    >
+                      Try Sample
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Mock Mode Indicator */}
+              {lastResult?.isMocked && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    ℹ️ Using sample content for demonstration
+                  </p>
                 </div>
               )}
 
