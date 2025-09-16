@@ -33,16 +33,11 @@ export default function IdeaBox() {
       const newProject = addProject({ idea });
       const result = await createPlan(idea);
 
-      if (result.prd) {
-        updateProject(newProject.id, { prd: result.prd, status: "planning" });
-        router.push(`/plan/review/${newProject.id}`);
-      } else {
-        setError(result.message || "Failed to generate PRD. Please try again.");
-        updateProject(newProject.id, { status: "failed" });
-      }
+      updateProject(newProject.id, { prd: result.prd, status: "planning" });
+      router.push(`/plan/review/${newProject.id}`);
     } catch (err) {
       console.error("Idea submission error:", err);
-      setError("An unexpected error occurred. Please try again.");
+      setError(err instanceof Error ? err.message : "An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
