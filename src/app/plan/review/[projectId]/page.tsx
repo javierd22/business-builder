@@ -19,7 +19,7 @@ export default function PlanReviewPage() {
   const projectId = params.projectId as string;
   
   const [project, setProject] = useState<Project | null>(null);
-  // const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isGeneratingUX, setIsGeneratingUX] = useState(false);
   const [profile, setProfile] = useState<{ persona: string; job: string } | null>(null);
@@ -28,6 +28,7 @@ export default function PlanReviewPage() {
     const projectData = getProject(projectId);
     if (!projectData) {
       setError("Project not found");
+      setIsLoading(false);
       return;
     }
     setProject(projectData);
@@ -40,6 +41,8 @@ export default function PlanReviewPage() {
         job: userProfile.job,
       });
     }
+    
+    setIsLoading(false);
   }, [projectId]);
 
   async function generateUX() {
