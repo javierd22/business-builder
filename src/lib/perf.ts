@@ -46,7 +46,7 @@ export function init(): void {
             ms: Math.round(lastEntry.startTime),
             meta: {
               type: 'lcp',
-              element: (lastEntry as any).element?.tagName || 'unknown'
+              element: (lastEntry as Record<string, unknown>).element?.tagName || 'unknown'
             }
           });
         });
@@ -94,7 +94,7 @@ export function init(): void {
       meta: {
         userAgent: navigator.userAgent,
         viewport: `${window.innerWidth}x${window.innerHeight}`,
-        connection: (navigator as any).connection?.effectiveType || 'unknown'
+        connection: (navigator as Record<string, unknown>).connection?.effectiveType || 'unknown'
       }
     });
 
