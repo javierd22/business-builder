@@ -21,19 +21,37 @@ export interface LLMConfig {
 function parseEnvConfig(): LLMConfig {
   const provider = process.env.LLM_PROVIDER as LLMProvider;
   
+  // Default to mock mode if no provider is set
   if (!provider || !['anthropic', 'openai'].includes(provider)) {
-    throw new Error('LLM_PROVIDER must be either "anthropic" or "openai"');
+    console.warn('LLM_PROVIDER not set or invalid, defaulting to mock mode');
+    return {
+      provider: 'anthropic',
+      anthropicApiKey: '',
+      openaiApiKey: '',
+      anthropicModel: 'claude-3-5-sonnet-latest',
+      openaiModel: 'gpt-4o-mini',
+      timeoutMs: 60000,
+      mockMode: true,
+      showBuildInfo: true,
+    };
   }
 
   const anthropicApiKey = process.env.ANTHROPIC_API_KEY || '';
   const openaiApiKey = process.env.OPENAI_API_KEY || '';
   
-  if (provider === 'anthropic' && !anthropicApiKey) {
-    throw new Error('ANTHROPIC_API_KEY is required when LLM_PROVIDER=anthropic');
-  }
-  
-  if (provider === 'openai' && !openaiApiKey) {
-    throw new Error('OPENAI_API_KEY is required when LLM_PROVIDER=openai');
+  // If no API keys are provided, default to mock mode
+  if ((provider === 'anthropic' && !anthropicApiKey) || (provider === 'openai' && !openaiApiKey)) {
+    console.warn(`No API key provided for ${provider}, defaulting to mock mode`);
+    return {
+      provider,
+      anthropicApiKey: '',
+      openaiApiKey: '',
+      anthropicModel: process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-latest',
+      openaiModel: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+      timeoutMs: parseInt(process.env.LLM_TIMEOUT_MS || '60000', 10),
+      mockMode: true,
+      showBuildInfo: process.env.NEXT_PUBLIC_SHOW_BUILD_INFO?.toLowerCase() === 'true',
+    };
   }
 
   return {
@@ -56,21 +74,18 @@ export function getEnvConfig(): LLMConfig {
   try {
     return parseEnvConfig();
   } catch (error) {
-    // In development, provide fallback config
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('Environment config error:', error);
-      return {
-        provider: 'anthropic',
-        anthropicApiKey: '',
-        openaiApiKey: '',
-        anthropicModel: 'claude-3-5-sonnet-latest',
-        openaiModel: 'gpt-4o-mini',
-        timeoutMs: 60000,
-        mockMode: true,
-        showBuildInfo: true,
-      };
-    }
-    throw error;
+    // Always provide fallback config to prevent crashes
+    console.warn('Environment config error, using fallback:', error);
+    return {
+      provider: 'anthropic',
+      anthropicApiKey: '',
+      openaiApiKey: '',
+      anthropicModel: 'claude-3-5-sonnet-latest',
+      openaiModel: 'gpt-4o-mini',
+      timeoutMs: 60000,
+      mockMode: true,
+      showBuildInfo: true,
+    };
   }
 }
 
