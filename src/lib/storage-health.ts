@@ -6,7 +6,7 @@ export interface StorageSnapshot {
   id: string;
   projectId: string;
   name: string;
-  data: any;
+  data: Record<string, unknown>;
   createdAt: string;
   sizeBytes: number;
 }
@@ -104,7 +104,7 @@ export function createSnapshot(projectId: string, name: string): boolean {
   
   try {
     const project = JSON.parse(localStorage.getItem('projects') || '[]')
-      .find((p: any) => p.id === projectId);
+      .find((p: Record<string, unknown>) => p.id === projectId);
     
     if (!project) return false;
     
@@ -158,7 +158,7 @@ export function restoreSnapshot(projectId: string, snapshotId: string): boolean 
     if (!snapshot) return false;
     
     const projects = JSON.parse(localStorage.getItem('projects') || '[]');
-    const projectIndex = projects.findIndex((p: any) => p.id === projectId);
+    const projectIndex = projects.findIndex((p: Record<string, unknown>) => p.id === projectId);
     
     if (projectIndex === -1) return false;
     
@@ -203,7 +203,7 @@ export function exportAllData(): string {
   if (!isClient()) return '{}';
   
   try {
-    const data: Record<string, any> = {};
+    const data: Record<string, unknown> = {};
     
     // Export all localStorage data
     for (let i = 0; i < localStorage.length; i++) {
