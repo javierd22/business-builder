@@ -17,8 +17,9 @@ export default function IdeaBox() {
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    // eslint-disable-next-line no-console
-    console.log("idea:", idea);
+    if (idea.trim()) {
+      console.log("idea:", idea);
+    }
     router.push("/idea");
   }
 
