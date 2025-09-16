@@ -181,10 +181,12 @@ async function parseResponse(response: Response): Promise<unknown> {
 
   throw new Error("Could not extract PRD content from response");
 }
+*/
 
 /**
  * Extract UX content from various response formats
  */
+/*
 function extractUXContent(data: unknown): string {
   if (typeof data === "string") {
     return data;
@@ -228,10 +230,12 @@ function extractUXContent(data: unknown): string {
 
   throw new Error("Could not extract UX content from response");
 }
+*/
 
 /**
  * Extract deployment info from response
  */
+/*
 function extractDeploymentInfo(data: unknown): { url?: string; status: string } {
   if (typeof data === "object" && data !== null) {
     const obj = data as Record<string, unknown>;
@@ -243,6 +247,7 @@ function extractDeploymentInfo(data: unknown): { url?: string; status: string } 
 
   return { status: "unknown" };
 }
+*/
 
 export interface PlanResponse {
   prd: string;
