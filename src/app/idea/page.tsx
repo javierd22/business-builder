@@ -7,17 +7,22 @@ import { createPlan } from "@/lib/api";
 import { Telemetry } from "@/lib/telemetry";
 import { recordMilestone } from "@/lib/insights";
 import { recordEvent } from "@/lib/observability";
+import { setStatus } from "@/lib/assumptions";
+import { recordSurvey } from "@/lib/research-telemetry";
+import { shouldShowResearch } from "@/lib/flags";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/_components/ui/Card";
 import { Textarea } from "@/app/_components/ui/Textarea";
 import { Button } from "@/app/_components/ui/Button";
 import FlowSteps from "@/app/_components/FlowSteps";
 import ConsentBanner, { useConsent } from "@/app/_components/ConsentBanner";
+import MicroSurvey from "@/app/_components/MicroSurvey";
 
 export default function IdeaPage() {
   const [idea, setIdea] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<{ persona: string; job: string } | null>(null);
+  const [showSurvey, setShowSurvey] = useState(false);
   const { isConsented } = useConsent();
   const router = useRouter();
 
@@ -45,6 +50,11 @@ export default function IdeaPage() {
       ok: true,
       ms: 0
     });
+
+    // Show survey if research is enabled and user has profile
+    if (shouldShowResearch() && userProfile) {
+      setShowSurvey(true);
+    }
   }, []);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -98,6 +108,19 @@ export default function IdeaPage() {
       setIsLoading(false);
     }
   }
+
+  const handleSurveySubmit = (result: { choice: string; note?: string }) => {
+    recordSurvey('local_only_ok', result.choice, result.note);
+    
+    // Update assumption status based on response
+    if (result.choice === 'Yes') {
+      setStatus('local_only_ok', 'validated', result.note);
+    } else if (result.choice === 'No') {
+      setStatus('local_only_ok', 'invalidated', result.note);
+    }
+    
+    setShowSurvey(false);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FBF9F4] via-[#F8F4ED] to-[#F5F0E8] py-12">
@@ -216,6 +239,18 @@ export default function IdeaPage() {
                 ))}
               </div>
             </div>
+
+            {showSurvey && shouldShowResearch() && (
+              <div className="mt-6">
+                <MicroSurvey
+                  assumptionId="local_only_ok"
+                  question="Is local-only storage acceptable for your use right now?"
+                  options={["Yes", "No"]}
+                  onSubmit={handleSurveySubmit}
+                  variant="inline"
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

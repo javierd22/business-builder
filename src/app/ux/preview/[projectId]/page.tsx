@@ -10,6 +10,10 @@ import { Project } from "@/lib/storage";
 import FlowSteps from "@/app/_components/FlowSteps";
 import { EmptyStates } from "@/app/_components/EmptyState";
 import { exportUXAsMarkdown, exportUXAsPDF, exportProjectAsJSON } from "@/lib/export";
+import { setStatus } from "@/lib/assumptions";
+import { recordSurvey } from "@/lib/research-telemetry";
+import { shouldShowResearch } from "@/lib/flags";
+import MicroSurvey from "@/app/_components/MicroSurvey";
 
 export default function UXPreviewPage() {
   const params = useParams();
@@ -21,6 +25,7 @@ export default function UXPreviewPage() {
   const [error, setError] = useState<string | null>(null);
   const [isDeploying, setIsDeploying] = useState(false);
   const [profile, setProfile] = useState<{ persona: string; job: string } | null>(null);
+  const [showSurvey, setShowSurvey] = useState(false);
 
   useEffect(() => {
     const projectData = getProject(projectId);
@@ -69,17 +74,45 @@ export default function UXPreviewPage() {
   function handleExportUXMarkdown() {
     if (!project?.ux) return;
     exportUXAsMarkdown(project.ux, project.idea);
+    
+    // Show survey after export (if research enabled)
+    if (shouldShowResearch()) {
+      setShowSurvey(true);
+    }
   }
 
   function handleExportUXPDF() {
     if (!project?.ux) return;
     exportUXAsPDF(project.ux, project.idea);
+    
+    // Show survey after export (if research enabled)
+    if (shouldShowResearch()) {
+      setShowSurvey(true);
+    }
   }
 
   function handleExportProject() {
     if (!project) return;
     exportProjectAsJSON(project);
+    
+    // Show survey after export (if research enabled)
+    if (shouldShowResearch()) {
+      setShowSurvey(true);
+    }
   }
+
+  const handleSurveySubmit = (result: { choice: string; note?: string }) => {
+    recordSurvey('exports_needed', result.choice, result.note);
+    
+    // Update assumption status based on response
+    if (result.choice === 'Yes') {
+      setStatus('exports_needed', 'validated', result.note);
+    } else if (result.choice === 'No') {
+      setStatus('exports_needed', 'invalidated', result.note);
+    }
+    
+    setShowSurvey(false);
+  };
 
   if (isLoading) {
     return (
@@ -229,6 +262,17 @@ export default function UXPreviewPage() {
                   )}
                 </CardContent>
               </Card>
+            )}
+
+            {/* Research Survey */}
+            {showSurvey && shouldShowResearch() && (
+              <MicroSurvey
+                assumptionId="exports_needed"
+                question="Was export helpful for your workflow?"
+                options={["Yes", "No"]}
+                onSubmit={handleSurveySubmit}
+                variant="box"
+              />
             )}
 
             {/* Error Display */}

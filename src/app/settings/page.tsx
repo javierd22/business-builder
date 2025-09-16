@@ -7,6 +7,7 @@ import { Button } from "@/app/_components/ui/Button";
 import { getProfile, updateProfile } from "@/lib/storage";
 import { Profile } from "@/lib/storage";
 import { getTelemetrySummary } from "@/lib/telemetry";
+import { shouldShowResearch } from "@/lib/flags";
 
 interface SettingsData {
   provider: string;
@@ -125,6 +126,56 @@ export default function SettingsPage() {
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-[#4A5568] mb-4">Settings</h1>
           <p className="text-lg text-[#6B7280]">Configure your Business Builder environment and LLM provider.</p>
+        </div>
+
+        {/* Settings Navigation */}
+        <div className="mb-8">
+          <div className="flex flex-wrap gap-4">
+            <Link 
+              href="/settings"
+              className="px-4 py-2 bg-[#D4AF37] text-white rounded-lg hover:bg-[#B8941F] focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 font-medium"
+            >
+              General
+            </Link>
+            <Link 
+              href="/settings/privacy"
+              className="px-4 py-2 bg-[#F8F4ED] text-[#8B6914] rounded-lg hover:bg-[#F5F0E8] border border-[#E5D5B7] focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 font-medium"
+            >
+              Privacy & Data
+            </Link>
+            {shouldShowResearch() && (
+              <Link 
+                href="/settings/research"
+                className="px-4 py-2 bg-[#F8F4ED] text-[#8B6914] rounded-lg hover:bg-[#F5F0E8] border border-[#E5D5B7] focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 font-medium"
+              >
+                Research Insights
+              </Link>
+            )}
+            {shouldShowResearch() && (
+              <Link 
+                href="/research/assumptions"
+                className="px-4 py-2 bg-[#F8F4ED] text-[#8B6914] rounded-lg hover:bg-[#F5F0E8] border border-[#E5D5B7] focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 font-medium"
+              >
+                Assumptions
+              </Link>
+            )}
+            {shouldShowResearch() && (
+              <Link 
+                href="/settings/logs"
+                className="px-4 py-2 bg-[#F8F4ED] text-[#8B6914] rounded-lg hover:bg-[#F5F0E8] border border-[#E5D5B7] focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 font-medium"
+              >
+                Logs & Analytics
+              </Link>
+            )}
+            {shouldShowResearch() && (
+              <Link 
+                href="/settings/storage"
+                className="px-4 py-2 bg-[#F8F4ED] text-[#8B6914] rounded-lg hover:bg-[#F5F0E8] border border-[#E5D5B7] focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 font-medium"
+              >
+                Storage & Backups
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Profile Settings */}

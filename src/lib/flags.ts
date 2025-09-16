@@ -1,106 +1,43 @@
 /**
- * Feature flags for safe experiments and gradual rollouts
+ * Feature flags for controlling UI visibility
+ * Client-safe environment variable reading
  */
 
-/**
- * Check if we're running in the browser
- */
 function isClient(): boolean {
   return typeof window !== 'undefined';
 }
 
-/**
- * Get feature flag value from environment variables
- */
-function getFlagValue(flagName: string, defaultValue: boolean = false): boolean {
+function isDev(): boolean {
+  return process.env.NODE_ENV === 'development';
+}
+
+function getEnvFlag(key: string, defaultValue: boolean): boolean {
   if (!isClient()) return defaultValue;
-
-  const value = process.env[`NEXT_PUBLIC_${flagName}`];
-  if (value === undefined) return defaultValue;
   
-  return value === 'true' || value === '1';
+  // Read from NEXT_PUBLIC_ environment variables (client-safe)
+  const value = process.env[key];
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  
+  return defaultValue;
 }
 
-/**
- * Feature flags configuration
- */
-export const FeatureFlags = {
-  /**
-   * Show pricing page and related CTAs
-   */
-  showPricing: getFlagValue('SHOW_PRICING', true),
+// Feature flags with sensible defaults
+export const SHOW_RESEARCH = getEnvFlag('NEXT_PUBLIC_SHOW_RESEARCH', isDev());
+export const SHOW_ASSUMPTIONS = getEnvFlag('NEXT_PUBLIC_SHOW_ASSUMPTIONS', isDev());
+export const SHOW_DOC_LINKS = getEnvFlag('NEXT_PUBLIC_SHOW_DOC_LINKS', isDev());
 
-  /**
-   * Show export functionality (Markdown, PDF, JSON)
-   */
-  showExports: getFlagValue('SHOW_EXPORTS', true),
-
-  /**
-   * Show insights and analytics dashboard
-   */
-  showInsights: getFlagValue('SHOW_INSIGHTS', true),
-
-  /**
-   * Show onboarding flow
-   */
-  showOnboarding: getFlagValue('SHOW_ONBOARDING', true),
-
-  /**
-   * Show import functionality
-   */
-  showImport: getFlagValue('SHOW_IMPORT', true),
-
-  /**
-   * Show telemetry tracking
-   */
-  showTelemetry: getFlagValue('SHOW_TELEMETRY', true),
-
-  /**
-   * Show flow steps navigation
-   */
-  showFlowSteps: getFlagValue('SHOW_FLOW_STEPS', true),
-
-  /**
-   * Show empty states
-   */
-  showEmptyStates: getFlagValue('SHOW_EMPTY_STATES', true),
-
-  /**
-   * Enable mock mode for demos
-   */
-  enableMockMode: getFlagValue('MOCK_AI', false),
-
-  /**
-   * Show build info badge
-   */
-  showBuildInfo: getFlagValue('SHOW_BUILD_INFO', false),
-};
-
-/**
- * Get all feature flags as an object
- */
-export function getAllFlags(): Record<string, boolean> {
-  return { ...FeatureFlags };
+// Helper function to check if research features should be visible
+export function shouldShowResearch(): boolean {
+  return SHOW_RESEARCH;
 }
 
-/**
- * Check if a specific feature is enabled
- */
-export function isFeatureEnabled(feature: keyof typeof FeatureFlags): boolean {
-  return FeatureFlags[feature];
+// Helper function to check if assumptions UI should be visible
+export function shouldShowAssumptions(): boolean {
+  return SHOW_ASSUMPTIONS;
 }
 
-/**
- * Get feature flag status for debugging
- */
-export function getFlagStatus(): {
-  flags: Record<string, boolean>;
-  environment: string;
-  timestamp: string;
-} {
-  return {
-    flags: getAllFlags(),
-    environment: process.env.NODE_ENV || 'development',
-    timestamp: new Date().toISOString(),
-  };
+// Helper function to check if documentation links should be visible
+export function shouldShowDocLinks(): boolean {
+  return SHOW_DOC_LINKS;
 }

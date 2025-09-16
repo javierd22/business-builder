@@ -12,6 +12,10 @@ import { EmptyStates } from "@/app/_components/EmptyState";
 import { exportPRDAsMarkdown, exportPRDAsPDF, exportProjectAsJSON } from "@/lib/export";
 import { Telemetry } from "@/lib/telemetry";
 import { recordMilestone } from "@/lib/insights";
+import { setStatus } from "@/lib/assumptions";
+import { recordSurvey } from "@/lib/research-telemetry";
+import { shouldShowResearch } from "@/lib/flags";
+import MicroSurvey from "@/app/_components/MicroSurvey";
 
 export default function PlanReviewPage() {
   const params = useParams();
@@ -23,6 +27,7 @@ export default function PlanReviewPage() {
   const [error, setError] = useState<string | null>(null);
   const [isGeneratingUX, setIsGeneratingUX] = useState(false);
   const [profile, setProfile] = useState<{ persona: string; job: string } | null>(null);
+  const [showSurvey, setShowSurvey] = useState(false);
 
   useEffect(() => {
     const projectData = getProject(projectId);
@@ -74,6 +79,11 @@ export default function PlanReviewPage() {
       // Refresh project data
       const updatedProject = getProject(projectId);
       setProject(updatedProject);
+
+      // Show survey after successful PRD generation
+      if (shouldShowResearch()) {
+        setShowSurvey(true);
+      }
       
       router.push(`/ux/preview/${projectId}`);
     } catch (err) {
@@ -101,6 +111,19 @@ export default function PlanReviewPage() {
     exportProjectAsJSON(project);
     Telemetry.projectExported();
   }
+
+  const handleSurveySubmit = (result: { choice: string; note?: string }) => {
+    recordSurvey('first_draft_value', result.choice, result.note);
+    
+    // Update assumption status based on response
+    if (result.choice === 'Yes') {
+      setStatus('first_draft_value', 'validated', result.note);
+    } else if (result.choice === 'No') {
+      setStatus('first_draft_value', 'invalidated', result.note);
+    }
+    
+    setShowSurvey(false);
+  };
 
   if (isLoading) {
     return (
@@ -250,6 +273,17 @@ export default function PlanReviewPage() {
                   )}
                 </CardContent>
               </Card>
+            )}
+
+            {/* Research Survey */}
+            {showSurvey && shouldShowResearch() && (
+              <MicroSurvey
+                assumptionId="first_draft_value"
+                question="Was this first PRD draft valuable?"
+                options={["Yes", "No"]}
+                onSubmit={handleSurveySubmit}
+                variant="box"
+              />
             )}
 
             {/* Error Display */}

@@ -7,11 +7,16 @@ import { Button } from "@/app/_components/ui/Button";
 import { getProject } from "@/lib/storage";
 import type { Project } from "@/lib/storage";
 import FlowSteps from "@/app/_components/FlowSteps";
+import { setStatus } from "@/lib/assumptions";
+import { recordSurvey } from "@/lib/research-telemetry";
+import { shouldShowResearch } from "@/lib/flags";
+import MicroSurvey from "@/app/_components/MicroSurvey";
 
 export default function DeployPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [isLoadingProject, setIsLoadingProject] = useState(true);
   const [isMockDemo, setIsMockDemo] = useState(false);
+  const [showSurvey, setShowSurvey] = useState(false);
   const params = useParams();
   const projectId = params.projectId as string;
 
@@ -25,6 +30,11 @@ export default function DeployPage() {
       if (foundProject?.deploymentLink === "https://example.com/live-demo") {
         setIsMockDemo(true);
       }
+
+      // Show survey if deployment link exists and research is enabled
+      if (foundProject?.deploymentLink && shouldShowResearch()) {
+        setShowSurvey(true);
+      }
     }
   }, [projectId]);
 
@@ -32,6 +42,19 @@ export default function DeployPage() {
     if (project?.deploymentLink) {
       window.open(project.deploymentLink, "_blank", "noopener,noreferrer");
     }
+  };
+
+  const handleSurveySubmit = (result: { choice: string; note?: string }) => {
+    recordSurvey('deploy_link_counts_as_live', result.choice, result.note);
+    
+    // Update assumption status based on response
+    if (result.choice === 'Yes') {
+      setStatus('deploy_link_counts_as_live', 'validated', result.note);
+    } else if (result.choice === 'No') {
+      setStatus('deploy_link_counts_as_live', 'invalidated', result.note);
+    }
+    
+    setShowSurvey(false);
   };
 
   const getStatusColor = (status: Project["status"]) => {
@@ -270,6 +293,19 @@ export default function DeployPage() {
             </div>
           </CardFooter>
         </Card>
+
+        {/* Research Survey */}
+        {showSurvey && shouldShowResearch() && (
+          <div className="mt-6">
+            <MicroSurvey
+              assumptionId="deploy_link_counts_as_live"
+              question="Does this count as 'live' for your needs?"
+              options={["Yes", "No"]}
+              onSubmit={handleSurveySubmit}
+              variant="box"
+            />
+          </div>
+        )}
       </div>
     </div>
   );
