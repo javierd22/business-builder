@@ -1,5 +1,6 @@
 /**
  * Performance monitoring utilities using the Performance API
+ * Updated: Fixed TypeScript casting issues for browser APIs
  */
 
 import { recordEvent } from './observability';
