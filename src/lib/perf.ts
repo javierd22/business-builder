@@ -45,7 +45,7 @@ export function init(): void {
             ms: Math.round(lastEntry.startTime),
             meta: {
               type: 'lcp',
-              element: (lastEntry as Record<string, unknown>).element?.tagName || 'unknown'
+              element: (lastEntry as any).element?.tagName || 'unknown'
             }
           });
         });
@@ -60,7 +60,7 @@ export function init(): void {
         let clsValue = 0;
         const clsObserver = new PerformanceObserver((list) => {
           for (const entry of list.getEntries()) {
-            const layoutShiftEntry = entry as Record<string, unknown>;
+            const layoutShiftEntry = entry as any;
             if (!layoutShiftEntry.hadRecentInput) {
               clsValue += (layoutShiftEntry.value as number) || 0;
             }
@@ -93,7 +93,7 @@ export function init(): void {
       meta: {
         userAgent: navigator.userAgent,
         viewport: `${window.innerWidth}x${window.innerHeight}`,
-        connection: (navigator as Record<string, unknown>).connection?.effectiveType || 'unknown'
+        connection: (navigator as any).connection?.effectiveType || 'unknown'
       }
     });
 
@@ -182,7 +182,7 @@ export function getPerformanceMetrics(): {
 
   // Memory usage (if available)
   if ('memory' in performance) {
-    const memory = (performance as Record<string, unknown>).memory as Record<string, number>;
+    const memory = (performance as any).memory as Record<string, number>;
     metrics.memory = {
       usedJSHeapSize: memory.usedJSHeapSize,
       totalJSHeapSize: memory.totalJSHeapSize,
