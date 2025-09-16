@@ -26,7 +26,6 @@ export function init(): void {
         ms: Math.round(renderTime),
         meta: {
           type: 'initial-render',
-          navigationStart: navigation.navigationStart,
           loadEventEnd: navigation.loadEventEnd
         }
       });
@@ -173,7 +172,6 @@ export function getPerformanceMetrics(): {
     jsHeapSizeLimit: number;
   };
   timing?: {
-    navigationStart: number;
     loadEventEnd: number;
     domContentLoaded: number;
   };
@@ -196,7 +194,6 @@ export function getPerformanceMetrics(): {
   const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
   if (navigation) {
     metrics.timing = {
-      navigationStart: navigation.navigationStart,
       loadEventEnd: navigation.loadEventEnd,
       domContentLoaded: navigation.domContentLoadedEventEnd
     };
