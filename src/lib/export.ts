@@ -276,11 +276,11 @@ export function validateProjectJSON(jsonData: unknown): { valid: boolean; projec
     }
 
     // Validate field types
-    if (typeof jsonData.id !== 'string' || 
-        typeof jsonData.idea !== 'string' || 
-        typeof jsonData.status !== 'string' ||
-        typeof jsonData.createdAt !== 'string' ||
-        typeof jsonData.updatedAt !== 'string') {
+    if (typeof (jsonData as any).id !== 'string' || 
+        typeof (jsonData as any).idea !== 'string' || 
+        typeof (jsonData as any).status !== 'string' ||
+        typeof (jsonData as any).createdAt !== 'string' ||
+        typeof (jsonData as any).updatedAt !== 'string') {
       return { 
         valid: false, 
         error: 'Invalid field types in project data' 
@@ -289,10 +289,10 @@ export function validateProjectJSON(jsonData: unknown): { valid: boolean; projec
 
     // Validate status enum
     const validStatuses = ['draft', 'planning', 'ux_design', 'deploying', 'completed', 'failed'];
-    if (!validStatuses.includes(jsonData.status)) {
+    if (!validStatuses.includes((jsonData as any).status)) {
       return { 
         valid: false, 
-        error: `Invalid status value: ${jsonData.status}` 
+        error: `Invalid status value: ${(jsonData as any).status}` 
       };
     }
 
