@@ -58,7 +58,7 @@ export default function Page() {
           <br className="hidden sm:block" /> Right now.
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-center text-[#6B7280]">
-          Build fully-functional apps in minutes with just your words. No coding necessary.
+          Transform your business ideas into structured plans and professional presentations in minutes.
         </p>
 
         <IdeaBox />
