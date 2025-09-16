@@ -46,7 +46,7 @@ export function init(): void {
             ms: Math.round(lastEntry.startTime),
             meta: {
               type: 'lcp',
-              element: lastEntry.element?.tagName || 'unknown'
+              element: (lastEntry as any).element?.tagName || 'unknown'
             }
           });
         });
@@ -61,8 +61,9 @@ export function init(): void {
         let clsValue = 0;
         const clsObserver = new PerformanceObserver((list) => {
           for (const entry of list.getEntries()) {
-            if (!(entry as any).hadRecentInput) {
-              clsValue += (entry as any).value;
+            const layoutShiftEntry = entry as Record<string, unknown>;
+            if (!layoutShiftEntry.hadRecentInput) {
+              clsValue += (layoutShiftEntry.value as number) || 0;
             }
           }
           
@@ -179,11 +180,11 @@ export function getPerformanceMetrics(): {
 } {
   if (!isClient()) return {};
 
-  const metrics: any = {};
+  const metrics: Record<string, unknown> = {};
 
   // Memory usage (if available)
   if ('memory' in performance) {
-    const memory = (performance as any).memory;
+    const memory = (performance as Record<string, unknown>).memory as Record<string, number>;
     metrics.memory = {
       usedJSHeapSize: memory.usedJSHeapSize,
       totalJSHeapSize: memory.totalJSHeapSize,

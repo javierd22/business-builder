@@ -18,7 +18,7 @@ export default function IdeaPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<{ persona: string; job: string } | null>(null);
-  const { isConsented, isLoading: consentLoading } = useConsent();
+  const { isConsented } = useConsent();
   const router = useRouter();
 
   const suggestions = [

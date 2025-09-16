@@ -10,7 +10,7 @@ interface ConsentBannerProps {
 
 export default function ConsentBanner({ onConsentChange, className = "" }: ConsentBannerProps) {
   const [isVisible, setIsVisible] = useState(false);
-  const [isConsented, setIsConsented] = useState(false);
+  const [, setIsConsented] = useState(false);
 
   useEffect(() => {
     // Check if user has already consented
