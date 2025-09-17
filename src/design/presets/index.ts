@@ -1,4 +1,4 @@
-import { Preset, Vertical, Block, HeroProps, LogoRowProps, FeatureGridProps, PricingProps, TestimonialProps, FAQProps, FooterProps } from '../types';
+import { Preset, Vertical, Block, HeroProps, LogoRowProps, FeatureGridProps, SplitImageProps, PricingProps, TestimonialProps, FAQProps, FooterProps } from '../types';
 
 const PRESETS: Record<Vertical, Preset[]> = {
   b2b_saas: [
