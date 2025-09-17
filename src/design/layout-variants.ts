@@ -79,7 +79,7 @@ export function generateLayoutVariant(preset: Preset, seed: string, variant: 'st
           ...block,
           props: {
             ...(block.props && typeof block.props === 'object' ? block.props : {}),
-            title: `⭐ ${(block.props as any)?.title || 'What our customers say'}`,
+            title: `⭐ ${(block.props as Record<string, unknown>)?.title || 'What our customers say'}`,
           },
         };
       }
