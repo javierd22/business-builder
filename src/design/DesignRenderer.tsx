@@ -20,7 +20,7 @@ interface DesignRendererProps {
 const DesignRenderer = forwardRef<HTMLDivElement, DesignRendererProps>(
   ({ preset, content, style }, ref) => {
     const renderBlock = (block: Block<unknown>, index: number) => {
-      const props = { ...block.props } as Record<string, unknown>;
+      const props = { ...(block.props && typeof block.props === 'object' ? block.props : {}) } as Record<string, unknown>;
       
       // Replace placeholders with actual content
       Object.keys(props).forEach(key => {
