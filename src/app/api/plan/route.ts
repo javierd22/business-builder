@@ -31,7 +31,18 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { idea, persona, job } = body;
+    const { 
+      idea, 
+      persona, 
+      job,
+      providerOverride,
+      modelOverride,
+      temperature,
+      depth,
+      format,
+      revision,
+      promptVersion
+    } = body;
 
     // Input validation
     if (!idea || typeof idea !== 'string') {
@@ -59,11 +70,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if provider/model overrides are allowed
+    const allowOverrides = process.env.ALLOW_PROVIDER_OVERRIDE === 'true' || process.env.NODE_ENV !== 'production';
+    
+    let effectiveProvider = providerOverride;
+    let effectiveModel = modelOverride;
+    
+    if (!allowOverrides) {
+      effectiveProvider = undefined;
+      effectiveModel = undefined;
+    }
+
     // Generate PRD using LLM client with persona/job context
-    const result = await generatePlan(idea.trim(), persona?.trim(), job?.trim());
+    // Note: Overrides are not yet supported in the LLM client
+    const result = await generatePlan(
+      idea.trim(), 
+      persona?.trim(), 
+      job?.trim()
+    );
 
     // Log successful generation
-    console.log(`[${new Date().toISOString()}] Plan generated: ${result.meta.provider}/${result.meta.model} - ${result.meta.durationMs}ms - ${result.meta.tokensUsed || 0} tokens`);
+    console.log(`[${new Date().toISOString()}] Plan generated: ${result.meta.provider}/${result.meta.model} - ${result.meta.durationMs}ms - ${result.meta.tokensUsed || 0} tokens${effectiveProvider ? ` (override: ${effectiveProvider})` : ''}`);
 
     return NextResponse.json({
       prd: result.prd,

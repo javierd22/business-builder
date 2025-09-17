@@ -275,6 +275,56 @@ export default function PlanReviewPage() {
               </Card>
             )}
 
+            {/* Evaluation Link */}
+            {shouldShowResearch() && (
+              <Card>
+                <CardContent className="p-4">
+                  <div className="text-sm text-[#8B6914] mb-2">
+                    <strong>🔬 Evaluation Harness</strong>
+                  </div>
+                  <p className="text-xs text-[#6B7280] mb-3">
+                    Compare this output with other providers or parameters in the evaluation harness.
+                  </p>
+                  <Button
+                    onClick={() => {
+                      // Create a single-item evaluation set with this idea
+                      const evalData = {
+                        set: {
+                          id: `temp_${Date.now()}`,
+                          name: `Quick Eval: ${project.idea.substring(0, 30)}...`,
+                          description: `Quick evaluation set created from project ${projectId}`,
+                          createdAt: new Date().toISOString(),
+                          updatedAt: new Date().toISOString()
+                        },
+                        items: [{
+                          id: `temp_item_${Date.now()}`,
+                          setId: `temp_${Date.now()}`,
+                          idea: project.idea,
+                          persona: profile?.persona,
+                          job: profile?.job,
+                          notes: `From project ${projectId}`,
+                          createdAt: new Date().toISOString()
+                        }]
+                      };
+                      
+                      // Import the set and navigate to evaluation
+                      import('@/lib/evalsets').then(({ importSet }) => {
+                        const result = importSet(evalData);
+                        if (result.success) {
+                          window.open(`/research/eval?set=${result.setId}&tab=plan`, '_blank');
+                        }
+                      });
+                    }}
+                    size="sm"
+                    variant="secondary"
+                    className="w-full text-xs border-[#E5D5B7] text-[#8B6914] hover:bg-[#F5F0E8]"
+                  >
+                    Open in Evaluation Harness
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Research Survey */}
             {showSurvey && shouldShowResearch() && (
               <MicroSurvey

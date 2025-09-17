@@ -1,43 +1,18 @@
-/**
- * Feature flags for controlling UI visibility
- * Client-safe environment variable reading
- */
+'use client';
 
-function isClient(): boolean {
-  return typeof window !== 'undefined';
-}
+// Feature flags for conditional visibility
+export const NEXT_PUBLIC_SHOW_CLARIFICATIONS = process.env.NEXT_PUBLIC_SHOW_CLARIFICATIONS === 'true' || 
+  (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_SHOW_CLARIFICATIONS !== 'false');
 
-function isDev(): boolean {
-  return process.env.NODE_ENV === 'development';
-}
+export const NEXT_PUBLIC_SHOW_ROADMAP = process.env.NEXT_PUBLIC_SHOW_ROADMAP === 'true' || 
+  (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_SHOW_ROADMAP !== 'false');
 
-function getEnvFlag(key: string, defaultValue: boolean): boolean {
-  if (!isClient()) return defaultValue;
-  
-  // Read from NEXT_PUBLIC_ environment variables (client-safe)
-  const value = process.env[key];
-  if (value === 'true') return true;
-  if (value === 'false') return false;
-  
-  return defaultValue;
-}
+export const NEXT_PUBLIC_SHOW_INSTANT_PREVIEW = process.env.NEXT_PUBLIC_SHOW_INSTANT_PREVIEW === 'true' || 
+  (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_SHOW_INSTANT_PREVIEW !== 'false');
 
-// Feature flags with sensible defaults
-export const SHOW_RESEARCH = getEnvFlag('NEXT_PUBLIC_SHOW_RESEARCH', isDev());
-export const SHOW_ASSUMPTIONS = getEnvFlag('NEXT_PUBLIC_SHOW_ASSUMPTIONS', isDev());
-export const SHOW_DOC_LINKS = getEnvFlag('NEXT_PUBLIC_SHOW_DOC_LINKS', isDev());
+// Legacy exports for backward compatibility
+export const shouldShowResearch = () => process.env.NEXT_PUBLIC_SHOW_RESEARCH === 'true' || 
+  (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_SHOW_RESEARCH !== 'false');
 
-// Helper function to check if research features should be visible
-export function shouldShowResearch(): boolean {
-  return SHOW_RESEARCH;
-}
-
-// Helper function to check if assumptions UI should be visible
-export function shouldShowAssumptions(): boolean {
-  return SHOW_ASSUMPTIONS;
-}
-
-// Helper function to check if documentation links should be visible
-export function shouldShowDocLinks(): boolean {
-  return SHOW_DOC_LINKS;
-}
+export const shouldShowDocLinks = () => process.env.NEXT_PUBLIC_SHOW_DOC_LINKS === 'true' || 
+  (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_SHOW_DOC_LINKS !== 'false');

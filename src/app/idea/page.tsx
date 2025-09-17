@@ -9,13 +9,14 @@ import { recordMilestone } from "@/lib/insights";
 import { recordEvent } from "@/lib/observability";
 import { setStatus } from "@/lib/assumptions";
 import { recordSurvey } from "@/lib/research-telemetry";
-import { shouldShowResearch } from "@/lib/flags";
+import { shouldShowResearch, NEXT_PUBLIC_SHOW_INSTANT_PREVIEW } from "@/lib/flags";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/_components/ui/Card";
 import { Textarea } from "@/app/_components/ui/Textarea";
 import { Button } from "@/app/_components/ui/Button";
 import FlowSteps from "@/app/_components/FlowSteps";
 import ConsentBanner, { useConsent } from "@/app/_components/ConsentBanner";
 import MicroSurvey from "@/app/_components/MicroSurvey";
+import InstantPreview from "@/app/_components/InstantPreview";
 
 export default function IdeaPage() {
   const [idea, setIdea] = useState("");
@@ -253,6 +254,25 @@ export default function IdeaPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Instant Preview */}
+        {NEXT_PUBLIC_SHOW_INSTANT_PREVIEW && idea.trim().length > 10 && (
+          <div className="mt-8">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-[#4A5568] mb-2">
+                Instant Preview
+              </h2>
+              <p className="text-[#6B7280]">
+                See how your idea could look as a website
+              </p>
+            </div>
+            <InstantPreview 
+              idea={idea} 
+              persona={profile?.persona} 
+              job={profile?.job} 
+            />
+          </div>
+        )}
       </div>
     </div>
   );

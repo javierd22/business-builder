@@ -1,8 +1,19 @@
 /**
- * Resilient API client with tolerant parsing, exponential backoff retry, and mock mode
+ * Resilient API client with tolerant parsing, exponential backoff retry, caching, timeouts, and fallbacks
  */
 
 import { recordEvent } from './observability';
+import { getCached, setCached, isCacheEnabled, type CacheKey } from './cache';
+import { 
+  DEFAULT_TIMEOUT_MS, 
+  FALLBACK_TIMEOUT_MS, 
+  nextFallback, 
+  shouldFallback, 
+  isRetryableError,
+  createTimeoutController,
+  type FallbackParams 
+} from './latency';
+import { getPerformanceSettings } from './settings';
 
 interface RetryOptions {
   maxRetries: number;
@@ -44,261 +55,132 @@ function calculateDelay(attempt: number, baseDelay: number, maxDelay: number): n
  */
 function shouldRetry(error: unknown, attempt: number, maxRetries: number): boolean {
   if (attempt >= maxRetries) return false;
-
-  // Network errors should be retried
-  if (error instanceof TypeError && error.message.includes("fetch")) {
-    return true;
-  }
-
-  // 5xx server errors should be retried
-  if (error instanceof Error && error.message.includes("500")) {
-    return true;
-  }
-
-  // Rate limiting should be retried
-  if (error instanceof Error && error.message.includes("429")) {
-    return true;
-  }
-
-  return false;
+  return isRetryableError(error);
 }
 
 /**
  * Fetch with exponential backoff retry
  */
 async function fetchWithRetry(
-  url: string,
-  options: RequestInit,
+  url: string, 
+  options: RequestInit & { signal?: AbortSignal } = {},
   retryOptions: RetryOptions = DEFAULT_RETRY_OPTIONS
 ): Promise<Response> {
-  let lastError: unknown;
-
-  for (let attempt = 0; attempt <= retryOptions.maxRetries; attempt++) {
+  const { maxRetries, baseDelay, maxDelay } = retryOptions;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const response = await fetch(url, options);
-
-      // Don't retry on 4xx errors (except 429)
-      if (response.status >= 400 && response.status < 500 && response.status !== 429) {
-        return response;
-      }
-
-      // Don't retry on successful responses
+      
+      // If response is ok, return it
       if (response.ok) {
         return response;
       }
-
-      // For 5xx and 429, throw an error to trigger retry
+      
+      // If it's a client error (4xx except 429), don't retry
+      if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+        return response;
+      }
+      
+      // For server errors (5xx) and rate limiting (429), throw to trigger retry
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-
+      
     } catch (error) {
-      lastError = error;
-
-      if (!shouldRetry(error, attempt, retryOptions.maxRetries)) {
+      // If this is the last attempt, throw the error
+      if (attempt === maxRetries) {
         throw error;
-    }
-
-    if (attempt < retryOptions.maxRetries) {
-      const delay = calculateDelay(attempt, retryOptions.baseDelay, retryOptions.maxDelay);
-        console.warn(`Request failed (attempt ${attempt + 1}/${retryOptions.maxRetries + 1}), retrying in ${delay}ms:`, error);
+      }
+      
+      // If we shouldn't retry this error, throw it
+      if (!shouldRetry(error, attempt, maxRetries)) {
+        throw error;
+      }
+      
+      // Calculate delay for next attempt
+      const delay = calculateDelay(attempt, baseDelay, maxDelay);
+      
+      // Wait before retrying
       await sleep(delay);
     }
   }
-  }
-
-  throw lastError;
+  
+  // This should never be reached, but TypeScript requires it
+  throw new Error('Max retries exceeded');
 }
 
 /**
- * Parse API response with tolerant error handling
+ * Tolerant JSON parsing that handles various response formats
  */
-/*
-async function parseResponse(response: Response): Promise<unknown> {
-  const contentType = response.headers.get("content-type");
-  
-  if (contentType?.includes("application/json")) {
-  try {
-    return await response.json();
-  } catch (error) {
-      console.warn("Failed to parse JSON response:", error);
-      throw new Error("Invalid response format");
-    }
+function parseResponse(data: unknown): { prd?: string; ux?: string; meta?: Record<string, unknown> } {
+  if (typeof data === 'string') {
+    // If it's a plain string, assume it's the content
+    return { prd: data };
   }
   
-  const text = await response.text();
-  if (!text) {
-    throw new Error("Empty response received");
+  if (typeof data === 'object' && data !== null) {
+    const obj = data as Record<string, unknown>;
+    
+    // Handle different possible response shapes
+    if (obj.prd && typeof obj.prd === 'string') {
+      return { prd: obj.prd, meta: obj.meta as Record<string, unknown> };
+    }
+    
+    if (obj.ux && typeof obj.ux === 'string') {
+      return { ux: obj.ux, meta: obj.meta as Record<string, unknown> };
+    }
+    
+    if (obj.content && typeof obj.content === 'string') {
+      return { prd: obj.content, meta: obj.meta as Record<string, unknown> };
+    }
+    
+    if (obj.response && typeof obj.response === 'string') {
+      return { prd: obj.response, meta: obj.meta as Record<string, unknown> };
+    }
+    
+    // If we have a text field, use it
+    if (obj.text && typeof obj.text === 'string') {
+      return { prd: obj.text, meta: obj.meta as Record<string, unknown> };
+    }
   }
   
-  // Try to parse as JSON even if content-type is wrong
-  try {
-    return JSON.parse(text);
-  } catch {
-    // Return as plain text if JSON parsing fails
-    return { content: text };
-  }
+  // Fallback: return the data as-is
+  return { prd: JSON.stringify(data), meta: {} };
 }
-*/
-
-/**
- * Extract PRD content from various response formats
- */
-/*
-function extractPRDContent(data: unknown): string {
-  if (typeof data === "string") {
-    return data;
-  }
-
-  if (typeof data === "object" && data !== null) {
-    const obj = data as Record<string, unknown>;
-    
-    // Direct prd field
-    if (typeof obj.prd === "string") {
-      return obj.prd;
-    }
-    
-    // OpenAI-style response
-    if (obj.choices && Array.isArray(obj.choices)) {
-      const choice = obj.choices[0] as Record<string, unknown>;
-      if (choice.message && typeof choice.message === "object") {
-        const message = choice.message as Record<string, unknown>;
-        if (typeof message.content === "string") {
-          return message.content;
-        }
-      }
-      if (typeof choice.text === "string") {
-        return choice.text;
-      }
-    }
-    
-    // Anthropic-style response
-    if (obj.content && Array.isArray(obj.content)) {
-      const content = obj.content[0] as Record<string, unknown>;
-      if (typeof content.text === "string") {
-        return content.text;
-      }
-    }
-    
-    // Generic content field
-    if (typeof obj.content === "string") {
-      return obj.content;
-    }
-  }
-
-  throw new Error("Could not extract PRD content from response");
-}
-*/
-
-/**
- * Extract UX content from various response formats
- */
-/*
-function extractUXContent(data: unknown): string {
-  if (typeof data === "string") {
-    return data;
-  }
-
-  if (typeof data === "object" && data !== null) {
-    const obj = data as Record<string, unknown>;
-    
-    // Direct ux field
-    if (typeof obj.ux === "string") {
-      return obj.ux;
-    }
-    
-    // OpenAI-style response
-    if (obj.choices && Array.isArray(obj.choices)) {
-      const choice = obj.choices[0] as Record<string, unknown>;
-      if (choice.message && typeof choice.message === "object") {
-        const message = choice.message as Record<string, unknown>;
-        if (typeof message.content === "string") {
-          return message.content;
-        }
-      }
-      if (typeof choice.text === "string") {
-        return choice.text;
-      }
-    }
-    
-    // Anthropic-style response
-    if (obj.content && Array.isArray(obj.content)) {
-      const content = obj.content[0] as Record<string, unknown>;
-      if (typeof content.text === "string") {
-        return content.text;
-      }
-    }
-    
-    // Generic content field
-    if (typeof obj.content === "string") {
-      return obj.content;
-    }
-  }
-
-  throw new Error("Could not extract UX content from response");
-}
-*/
-
-/**
- * Extract deployment info from response
- */
-/*
-function extractDeploymentInfo(data: unknown): { url?: string; status: string } {
-  if (typeof data === "object" && data !== null) {
-    const obj = data as Record<string, unknown>;
-    return {
-      url: typeof obj.url === "string" ? obj.url : undefined,
-      status: typeof obj.status === "string" ? obj.status : "unknown",
-    };
-  }
-
-  return { status: "unknown" };
-}
-*/
 
 export interface PlanResponse {
   prd: string;
-  meta: {
-    provider: string;
-    model: string;
-    durationMs: number;
-    tokensUsed?: number;
-    costEstimate?: number;
-  };
-}
-
-export interface PlanRequest {
-  idea: string;
-  persona?: string;
-  job?: string;
+  meta?: Record<string, unknown>;
 }
 
 export interface UXResponse {
   ux: string;
-  meta: {
-    provider: string;
-    model: string;
-    durationMs: number;
-    tokensUsed?: number;
-    costEstimate?: number;
-  };
-}
-
-export interface UXRequest {
-  prd: string;
-  persona?: string;
-  job?: string;
+  meta?: Record<string, unknown>;
 }
 
 export interface DeployResponse {
   url?: string;
-  status: 'deploying' | 'completed' | 'failed';
-  deploymentId?: string;
+  status: 'pending' | 'completed' | 'failed';
   message?: string;
+  meta?: Record<string, unknown>;
 }
 
 /**
  * Create a business plan from an idea
  */
-export async function createPlan(idea: string, persona?: string, job?: string): Promise<PlanResponse> {
+export async function createPlan(
+  idea: string, 
+  persona?: string, 
+  job?: string,
+  options?: {
+    providerOverride?: 'anthropic' | 'openai';
+    modelOverride?: string;
+    temperature?: number;
+    depth?: 'brief' | 'standard' | 'deep';
+    format?: 'markdown' | 'bulleted';
+    revision?: string;
+    promptVersion?: string;
+  }
+): Promise<PlanResponse> {
   const startTime = performance.now();
   
   if (!idea.trim()) {
@@ -309,8 +191,56 @@ export async function createPlan(idea: string, persona?: string, job?: string): 
     throw new Error("Business idea must be at least 10 characters long");
   }
 
+  // Get performance settings for defaults
+  const settings = getPerformanceSettings();
+  
+  // Build parameters with defaults
+  const params: FallbackParams = {
+    temperature: options?.temperature ?? settings.defaultTemperature,
+    depth: options?.depth ?? settings.defaultDepth,
+    format: options?.format ?? settings.defaultFormat,
+    revision: options?.revision,
+    promptVersion: options?.promptVersion ?? 'v1',
+  };
+
+  // Check cache first if enabled
+  if (isCacheEnabled()) {
+    const cacheKey: CacheKey = {
+      step: 'plan',
+      idea: idea.trim(),
+      persona: persona?.trim(),
+      job: job?.trim(),
+      ...params,
+    };
+    
+    const cached = getCached(cacheKey);
+    if (cached) {
+      const duration = Math.round(performance.now() - startTime);
+      
+      // Record cache hit
+      recordEvent({
+        name: 'api_call',
+        route: '/api/plan',
+        ok: true,
+        ms: duration,
+        meta: {
+          cached: true,
+          provider: 'cached',
+          model: 'cached',
+          tokensUsed: 0,
+          costEstimate: 0,
+        },
+      });
+      
+      return {
+        prd: cached.text,
+        meta: cached.meta || { cached: true },
+      };
+    }
+  }
+
   if (isMockMode()) {
-    return {
+    const mockResponse = {
       prd: `# Product Requirements Document
 
 ## Executive Summary
@@ -354,85 +284,279 @@ This document outlines the requirements for developing a business solution that 
         costEstimate: 0,
       },
     };
-  }
-
-  try {
-    const response = await fetchWithRetry("/api/plan", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ 
+    
+    // Cache mock response if enabled
+    if (isCacheEnabled()) {
+      const cacheKey: CacheKey = {
+        step: 'plan',
         idea: idea.trim(),
         persona: persona?.trim(),
-        job: job?.trim()
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+        job: job?.trim(),
+        ...params,
+      };
+      setCached(cacheKey, mockResponse.prd, mockResponse.meta);
     }
+    
+    return mockResponse;
+  }
 
-    const data = await response.json();
-    const duration = Math.round(performance.now() - startTime);
+  // Try primary request with timeout
+  let fallbackAttempted = false;
+  let finalParams = params;
+  
+  try {
+    const { controller, timeoutId } = createTimeoutController(settings.defaultTimeoutMs);
     
-    // Record successful API call
-    recordEvent({
-      name: 'api-call',
-      route: '/api/plan',
-      ok: true,
-      ms: duration,
-      meta: {
-        provider: data.meta?.provider || 'unknown',
-        model: data.meta?.model || 'unknown'
+    try {
+      const response = await fetchWithRetry("/api/plan", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          idea: idea.trim(),
+          persona: persona?.trim(),
+          job: job?.trim(),
+          providerOverride: options?.providerOverride,
+          modelOverride: options?.modelOverride,
+          temperature: finalParams.temperature,
+          depth: finalParams.depth,
+          format: finalParams.format,
+          revision: finalParams.revision,
+          promptVersion: finalParams.promptVersion
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
       }
-    });
-    
-    return data as PlanResponse;
+
+      const data = await response.json();
+      const duration = Math.round(performance.now() - startTime);
+      
+      // Check if we should have used fallback (performance warning)
+      const shouldHaveUsedFallback = shouldFallback(duration, 'plan');
+      
+      // Record successful API call
+      recordEvent({
+        name: 'api_call',
+        route: '/api/plan',
+        ok: true,
+        ms: duration,
+        meta: {
+          provider: data.meta?.provider,
+          model: data.meta?.model,
+          tokensUsed: data.meta?.tokensUsed,
+          costEstimate: data.meta?.costEstimate,
+          fallbackAttempted,
+          shouldHaveUsedFallback,
+          params: finalParams,
+        },
+      });
+
+      // Cache successful response if enabled
+      if (isCacheEnabled()) {
+        const cacheKey: CacheKey = {
+          step: 'plan',
+          idea: idea.trim(),
+          persona: persona?.trim(),
+          job: job?.trim(),
+          ...finalParams,
+        };
+        setCached(cacheKey, data.prd, data.meta);
+      }
+
+      return {
+        prd: data.prd,
+        meta: data.meta,
+      };
+
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      // If timeout or retryable error, try fallback
+      if (!fallbackAttempted && ((error instanceof Error && error.name === 'AbortError') || isRetryableError(error))) {
+        const elapsed = performance.now() - startTime;
+        
+        if (shouldFallback(elapsed, 'plan') || (error instanceof Error && error.name === 'AbortError')) {
+          fallbackAttempted = true;
+          finalParams = nextFallback(params);
+          
+          // Try fallback with shorter timeout
+          const { controller: fallbackController, timeoutId: fallbackTimeoutId } = createTimeoutController(FALLBACK_TIMEOUT_MS);
+          
+          try {
+            const fallbackResponse = await fetchWithRetry("/api/plan", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ 
+                idea: idea.trim(),
+                persona: persona?.trim(),
+                job: job?.trim(),
+                providerOverride: options?.providerOverride,
+                modelOverride: options?.modelOverride,
+                temperature: finalParams.temperature,
+                depth: finalParams.depth,
+                format: finalParams.format,
+                revision: finalParams.revision,
+                promptVersion: finalParams.promptVersion
+              }),
+              signal: fallbackController.signal,
+            });
+
+            clearTimeout(fallbackTimeoutId);
+
+            if (!fallbackResponse.ok) {
+              const errorData = await fallbackResponse.json().catch(() => ({}));
+              throw new Error(errorData.message || `HTTP ${fallbackResponse.status}: ${fallbackResponse.statusText}`);
+            }
+
+            const data = await fallbackResponse.json();
+            const duration = Math.round(performance.now() - startTime);
+            
+            // Record successful fallback API call
+            recordEvent({
+              name: 'api_call',
+              route: '/api/plan',
+              ok: true,
+              ms: duration,
+              meta: {
+                provider: data.meta?.provider,
+                model: data.meta?.model,
+                tokensUsed: data.meta?.tokensUsed,
+                costEstimate: data.meta?.costEstimate,
+                fallbackAttempted: true,
+                originalParams: params,
+                fallbackParams: finalParams,
+              },
+            });
+
+            // Cache fallback response if enabled
+            if (isCacheEnabled()) {
+              const cacheKey: CacheKey = {
+                step: 'plan',
+                idea: idea.trim(),
+                persona: persona?.trim(),
+                job: job?.trim(),
+                ...finalParams,
+              };
+              setCached(cacheKey, data.prd, data.meta);
+            }
+
+            return {
+              prd: data.prd,
+              meta: data.meta,
+            };
+
+          } catch (fallbackError) {
+            clearTimeout(fallbackTimeoutId);
+            throw fallbackError;
+          }
+        }
+      }
+      
+      throw error;
+    }
   } catch (error) {
     const duration = Math.round(performance.now() - startTime);
     
     // Record failed API call
     recordEvent({
-      name: 'api-call',
+      name: 'api_call',
       route: '/api/plan',
       ok: false,
       ms: duration,
       meta: {
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }
+        error: error instanceof Error ? error.message : 'Unknown error',
+        fallbackAttempted,
+        params: finalParams,
+        timeout: error instanceof Error && error.name === 'AbortError',
+      },
     });
-    
-    if (error instanceof Error) {
-      if (error.message.includes("fetch")) {
-        throw new Error("Network error. Please check your connection and try again.");
-      }
-      if (error.message.includes("500")) {
-        throw new Error("Service temporarily unavailable. Please try again in a few minutes.");
-      }
-      if (error.message.includes("429")) {
-        throw new Error("Too many requests. Please wait a moment before trying again.");
-      }
-      throw error;
-    }
-    
-    throw new Error("An unexpected error occurred. Please try again.");
+
+    throw error;
   }
 }
 
 /**
  * Create UX design from a PRD
  */
-export async function createUX(prd: string, persona?: string, job?: string): Promise<UXResponse> {
+export async function createUX(
+  prd: string, 
+  persona?: string, 
+  job?: string,
+  options?: {
+    providerOverride?: 'anthropic' | 'openai';
+    modelOverride?: string;
+    temperature?: number;
+    depth?: 'brief' | 'standard' | 'deep';
+    format?: 'markdown' | 'bulleted';
+    revision?: string;
+    promptVersion?: string;
+  }
+): Promise<UXResponse> {
   const startTime = performance.now();
   
   if (!prd.trim()) {
     throw new Error("Product Requirements Document is required");
   }
 
+  // Get performance settings for defaults
+  const settings = getPerformanceSettings();
+  
+  // Build parameters with defaults
+  const params: FallbackParams = {
+    temperature: options?.temperature ?? settings.defaultTemperature,
+    depth: options?.depth ?? settings.defaultDepth,
+    format: options?.format ?? settings.defaultFormat,
+    revision: options?.revision,
+    promptVersion: options?.promptVersion ?? 'v1',
+  };
+
+  // Check cache first if enabled
+  if (isCacheEnabled()) {
+    const cacheKey: CacheKey = {
+      step: 'ux',
+      idea: prd.trim(), // Use PRD as the "idea" for UX generation
+      persona: persona?.trim(),
+      job: job?.trim(),
+      ...params,
+    };
+    
+    const cached = getCached(cacheKey);
+    if (cached) {
+      const duration = Math.round(performance.now() - startTime);
+      
+      // Record cache hit
+      recordEvent({
+        name: 'api_call',
+        route: '/api/ux',
+        ok: true,
+        ms: duration,
+        meta: {
+          cached: true,
+          provider: 'cached',
+          model: 'cached',
+          tokensUsed: 0,
+          costEstimate: 0,
+        },
+      });
+      
+      return {
+        ux: cached.text,
+        meta: cached.meta || { cached: true },
+      };
+    }
+  }
+
   if (isMockMode()) {
-    return {
+    const mockResponse = {
       ux: `# User Experience Design
 
 ## Design Principles
@@ -465,23 +589,11 @@ export async function createUX(prd: string, persona?: string, job?: string): Pro
 
 ### Project List
 - Grid/list view toggle
-- Search and filter controls
-- Project status indicators
-- Bulk action options
+- Search and filter functionality
+- Bulk operations support
+- Status indicators
 
-### Project Detail
-- Tabbed interface for different views
-- Real-time collaboration indicators
-- Version history and comments
-- Export and sharing controls
-
-## Interaction Patterns
-- **Hover States:** Subtle animations and visual feedback
-- **Loading States:** Skeleton screens and progress indicators
-- **Error Handling:** Clear error messages with recovery actions
-- **Success Feedback:** Toast notifications and confirmation dialogs
-
-## Accessibility Considerations
+## Accessibility Features
 - Keyboard navigation support
 - Screen reader compatibility
 - High contrast mode support
@@ -494,89 +606,214 @@ export async function createUX(prd: string, persona?: string, job?: string): Pro
         costEstimate: 0,
       },
     };
+    
+    // Cache mock response if enabled
+    if (isCacheEnabled()) {
+      const cacheKey: CacheKey = {
+        step: 'ux',
+        idea: prd.trim(),
+        persona: persona?.trim(),
+        job: job?.trim(),
+        ...params,
+      };
+      setCached(cacheKey, mockResponse.ux, mockResponse.meta);
+    }
+    
+    return mockResponse;
   }
 
+  // Try primary request with timeout
+  let fallbackAttempted = false;
+  let finalParams = params;
+  
   try {
-    const response = await fetchWithRetry("/api/ux", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ 
-        prd: prd.trim(),
-        persona: persona?.trim(),
-        job: job?.trim()
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    const duration = Math.round(performance.now() - startTime);
+    const { controller, timeoutId } = createTimeoutController(settings.defaultTimeoutMs);
     
-    // Record successful API call
-    recordEvent({
-      name: 'api-call',
-      route: '/api/ux',
-      ok: true,
-      ms: duration,
-      meta: {
-        provider: data.meta?.provider || 'unknown',
-        model: data.meta?.model || 'unknown'
+    try {
+      const response = await fetchWithRetry("/api/ux", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          prd: prd.trim(),
+          persona: persona?.trim(),
+          job: job?.trim(),
+          providerOverride: options?.providerOverride,
+          modelOverride: options?.modelOverride,
+          temperature: finalParams.temperature,
+          depth: finalParams.depth,
+          format: finalParams.format,
+          revision: finalParams.revision,
+          promptVersion: finalParams.promptVersion
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
       }
-    });
-    
-    return data as UXResponse;
+
+      const data = await response.json();
+      const duration = Math.round(performance.now() - startTime);
+      
+      // Check if we should have used fallback (performance warning)
+      const shouldHaveUsedFallback = shouldFallback(duration, 'ux');
+      
+      // Record successful API call
+      recordEvent({
+        name: 'api_call',
+        route: '/api/ux',
+        ok: true,
+        ms: duration,
+        meta: {
+          provider: data.meta?.provider,
+          model: data.meta?.model,
+          tokensUsed: data.meta?.tokensUsed,
+          costEstimate: data.meta?.costEstimate,
+          fallbackAttempted,
+          shouldHaveUsedFallback,
+          params: finalParams,
+        },
+      });
+
+      // Cache successful response if enabled
+      if (isCacheEnabled()) {
+        const cacheKey: CacheKey = {
+          step: 'ux',
+          idea: prd.trim(),
+          persona: persona?.trim(),
+          job: job?.trim(),
+          ...finalParams,
+        };
+        setCached(cacheKey, data.ux, data.meta);
+      }
+
+      return {
+        ux: data.ux,
+        meta: data.meta,
+      };
+
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      // If timeout or retryable error, try fallback
+      if (!fallbackAttempted && ((error instanceof Error && error.name === 'AbortError') || isRetryableError(error))) {
+        const elapsed = performance.now() - startTime;
+        
+        if (shouldFallback(elapsed, 'ux') || (error instanceof Error && error.name === 'AbortError')) {
+          fallbackAttempted = true;
+          finalParams = nextFallback(params);
+          
+          // Try fallback with shorter timeout
+          const { controller: fallbackController, timeoutId: fallbackTimeoutId } = createTimeoutController(FALLBACK_TIMEOUT_MS);
+          
+          try {
+            const fallbackResponse = await fetchWithRetry("/api/ux", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ 
+                prd: prd.trim(),
+                persona: persona?.trim(),
+                job: job?.trim(),
+                providerOverride: options?.providerOverride,
+                modelOverride: options?.modelOverride,
+                temperature: finalParams.temperature,
+                depth: finalParams.depth,
+                format: finalParams.format,
+                revision: finalParams.revision,
+                promptVersion: finalParams.promptVersion
+              }),
+              signal: fallbackController.signal,
+            });
+
+            clearTimeout(fallbackTimeoutId);
+
+            if (!fallbackResponse.ok) {
+              const errorData = await fallbackResponse.json().catch(() => ({}));
+              throw new Error(errorData.message || `HTTP ${fallbackResponse.status}: ${fallbackResponse.statusText}`);
+            }
+
+            const data = await fallbackResponse.json();
+            const duration = Math.round(performance.now() - startTime);
+            
+            // Record successful fallback API call
+            recordEvent({
+              name: 'api_call',
+              route: '/api/ux',
+              ok: true,
+              ms: duration,
+              meta: {
+                provider: data.meta?.provider,
+                model: data.meta?.model,
+                tokensUsed: data.meta?.tokensUsed,
+                costEstimate: data.meta?.costEstimate,
+                fallbackAttempted: true,
+                originalParams: params,
+                fallbackParams: finalParams,
+              },
+            });
+
+            // Cache fallback response if enabled
+            if (isCacheEnabled()) {
+              const cacheKey: CacheKey = {
+                step: 'ux',
+                idea: prd.trim(),
+                persona: persona?.trim(),
+                job: job?.trim(),
+                ...finalParams,
+              };
+              setCached(cacheKey, data.ux, data.meta);
+            }
+
+            return {
+              ux: data.ux,
+              meta: data.meta,
+            };
+
+          } catch (fallbackError) {
+            clearTimeout(fallbackTimeoutId);
+            throw fallbackError;
+          }
+        }
+      }
+      
+      throw error;
+    }
   } catch (error) {
     const duration = Math.round(performance.now() - startTime);
     
     // Record failed API call
     recordEvent({
-      name: 'api-call',
+      name: 'api_call',
       route: '/api/ux',
       ok: false,
       ms: duration,
       meta: {
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }
+        error: error instanceof Error ? error.message : 'Unknown error',
+        fallbackAttempted,
+        params: finalParams,
+        timeout: error instanceof Error && error.name === 'AbortError',
+      },
     });
-    
-    if (error instanceof Error) {
-      if (error.message.includes("fetch")) {
-        throw new Error("Network error. Please check your connection and try again.");
-      }
-      if (error.message.includes("500")) {
-        throw new Error("Service temporarily unavailable. Please try again in a few minutes.");
-      }
-      if (error.message.includes("429")) {
-        throw new Error("Too many requests. Please wait a moment before trying again.");
-      }
-      throw error;
-    }
-    
-    throw new Error("An unexpected error occurred. Please try again.");
+
+    throw error;
   }
 }
 
 /**
- * Request deployment of a project
+ * Request deployment (placeholder implementation)
  */
-export async function requestDeploy(projectId: string, prd: string, ux: string): Promise<DeployResponse> {
+export async function requestDeploy(projectId: string): Promise<DeployResponse> {
   const startTime = performance.now();
   
   if (!projectId.trim()) {
     throw new Error("Project ID is required");
-  }
-
-  if (!prd.trim()) {
-    throw new Error("PRD is required for deployment");
-  }
-
-  if (!ux.trim()) {
-    throw new Error("UX specification is required for deployment");
   }
 
   try {
@@ -585,11 +822,7 @@ export async function requestDeploy(projectId: string, prd: string, ux: string):
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ 
-        projectId: projectId.trim(),
-        prd: prd.trim(),
-        ux: ux.trim()
-      }),
+      body: JSON.stringify({ projectId: projectId.trim() }),
     });
 
     if (!response.ok) {
@@ -602,44 +835,33 @@ export async function requestDeploy(projectId: string, prd: string, ux: string):
     
     // Record successful API call
     recordEvent({
-      name: 'api-call',
+      name: 'api_call',
       route: '/api/deploy',
       ok: true,
       ms: duration,
       meta: {
-        projectId: projectId.trim()
-      }
+        projectId,
+        status: data.status,
+      },
     });
-    
+
     return data as DeployResponse;
+
   } catch (error) {
     const duration = Math.round(performance.now() - startTime);
     
     // Record failed API call
     recordEvent({
-      name: 'api-call',
+      name: 'api_call',
       route: '/api/deploy',
       ok: false,
       ms: duration,
       meta: {
-        projectId: projectId.trim(),
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }
+        projectId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
     });
-    
-    if (error instanceof Error) {
-      if (error.message.includes("fetch")) {
-        throw new Error("Network error. Please check your connection and try again.");
-      }
-      if (error.message.includes("500")) {
-        throw new Error("Service temporarily unavailable. Please try again in a few minutes.");
-      }
-      if (error.message.includes("429")) {
-        throw new Error("Too many requests. Please wait a moment before trying again.");
-      }
-      throw error;
-    }
-    
-    throw new Error("An unexpected error occurred. Please try again.");
+
+    throw error;
   }
 }

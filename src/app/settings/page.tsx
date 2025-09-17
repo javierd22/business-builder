@@ -8,6 +8,7 @@ import { getProfile, updateProfile } from "@/lib/storage";
 import { Profile } from "@/lib/storage";
 import { getTelemetrySummary } from "@/lib/telemetry";
 import { shouldShowResearch } from "@/lib/flags";
+import { NEXT_PUBLIC_SHOW_CLARIFICATIONS, NEXT_PUBLIC_SHOW_ROADMAP } from "@/lib/flags";
 
 interface SettingsData {
   provider: string;
@@ -143,13 +144,27 @@ export default function SettingsPage() {
             >
               Privacy & Data
             </Link>
+            <Link 
+              href="/settings/performance"
+              className="px-4 py-2 bg-[#F8F4ED] text-[#8B6914] rounded-lg hover:bg-[#F5F0E8] border border-[#E5D5B7] focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 font-medium"
+            >
+              Performance & Cost
+            </Link>
             {shouldShowResearch() && (
-              <Link 
-                href="/settings/research"
-                className="px-4 py-2 bg-[#F8F4ED] text-[#8B6914] rounded-lg hover:bg-[#F5F0E8] border border-[#E5D5B7] focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 font-medium"
-              >
-                Research Insights
-              </Link>
+              <>
+                <Link 
+                  href="/settings/research"
+                  className="px-4 py-2 bg-[#F8F4ED] text-[#8B6914] rounded-lg hover:bg-[#F5F0E8] border border-[#E5D5B7] focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 font-medium"
+                >
+                  Research Insights
+                </Link>
+                <Link 
+                  href="/research/eval"
+                  className="px-4 py-2 bg-[#F8F4ED] text-[#8B6914] rounded-lg hover:bg-[#F5F0E8] border border-[#E5D5B7] focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 font-medium"
+                >
+                  Evaluation Harness
+                </Link>
+              </>
             )}
             {shouldShowResearch() && (
               <Link 
@@ -173,6 +188,22 @@ export default function SettingsPage() {
                 className="px-4 py-2 bg-[#F8F4ED] text-[#8B6914] rounded-lg hover:bg-[#F5F0E8] border border-[#E5D5B7] focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 font-medium"
               >
                 Storage & Backups
+              </Link>
+            )}
+            {NEXT_PUBLIC_SHOW_CLARIFICATIONS && (
+              <Link 
+                href="/settings/clarifications"
+                className="px-4 py-2 bg-[#F8F4ED] text-[#8B6914] rounded-lg hover:bg-[#F5F0E8] border border-[#E5D5B7] focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 font-medium"
+              >
+                Clarifications
+              </Link>
+            )}
+            {NEXT_PUBLIC_SHOW_ROADMAP && (
+              <Link 
+                href="/roadmap"
+                className="px-4 py-2 bg-[#F8F4ED] text-[#8B6914] rounded-lg hover:bg-[#F5F0E8] border border-[#E5D5B7] focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 font-medium"
+              >
+                Roadmap
               </Link>
             )}
           </div>

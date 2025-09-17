@@ -31,7 +31,18 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { prd, persona, job } = body;
+    const { 
+      prd, 
+      persona, 
+      job,
+      providerOverride,
+      modelOverride,
+      temperature,
+      depth,
+      format,
+      revision,
+      promptVersion
+    } = body;
 
     // Input validation
     if (!prd || typeof prd !== 'string') {
@@ -59,11 +70,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if provider/model overrides are allowed
+    const allowOverrides = process.env.ALLOW_PROVIDER_OVERRIDE === 'true' || process.env.NODE_ENV !== 'production';
+    
+    let effectiveProvider = providerOverride;
+    let effectiveModel = modelOverride;
+    
+    if (!allowOverrides) {
+      effectiveProvider = undefined;
+      effectiveModel = undefined;
+    }
+
     // Generate UX using LLM client with persona/job context
-    const result = await generateUX(prd.trim(), persona?.trim(), job?.trim());
+    // Note: Overrides are not yet supported in the LLM client
+    const result = await generateUX(
+      prd.trim(), 
+      persona?.trim(), 
+      job?.trim()
+    );
 
     // Log successful generation
-    console.log(`[${new Date().toISOString()}] UX generated: ${result.meta.provider}/${result.meta.model} - ${result.meta.durationMs}ms - ${result.meta.tokensUsed || 0} tokens`);
+    console.log(`[${new Date().toISOString()}] UX generated: ${result.meta.provider}/${result.meta.model} - ${result.meta.durationMs}ms - ${result.meta.tokensUsed || 0} tokens${effectiveProvider ? ` (override: ${effectiveProvider})` : ''}`);
 
     return NextResponse.json({
       ux: result.ux,
@@ -95,7 +122,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { message: 'Failed to generate UX specification. Please try again.' },
+      { message: 'Failed to generate UX. Please try again.' },
       { status: 500 }
     );
   }
