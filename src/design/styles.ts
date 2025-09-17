@@ -268,7 +268,7 @@ export function getButtonClass(variant: StyleVariant, size: 'sm' | 'md' | 'lg' =
 
 export function getCardClass(variant: StyleVariant): string {
   const tokens = getStyleTokens(variant);
-  return `${tokens.colors.surface} ${tokens.border} border ${tokens.radius.lg} ${tokens.shadow.md}`;
+  return `${tokens.colors.surface} border ${tokens.colors.border} ${tokens.radius.lg} ${tokens.shadow.md}`;
 }
 
 export function getHeadingClass(variant: StyleVariant, level: 1 | 2 | 3 | 4 | 5 | 6): string {
