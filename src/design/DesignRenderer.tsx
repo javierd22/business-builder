@@ -1,7 +1,7 @@
 'use client';
 
 import { forwardRef } from 'react';
-import { Preset, DesignContent, StyleVariant } from './types';
+import { Preset, DesignContent, StyleVariant, Block } from './types';
 import HeroBlock from './blocks/Hero';
 import LogoRowBlock from './blocks/LogoRow';
 import FeatureGridBlock from './blocks/FeatureGrid';
