@@ -26,7 +26,7 @@ export async function downloadPNG(element: HTMLElement, filename: string): Promi
     console.error('Error exporting PNG:', error);
     
     // Fallback: try to install the library
-    if (error.message?.includes('Cannot resolve module')) {
+    if (error instanceof Error && error.message?.includes('Cannot resolve module')) {
       alert('PNG export requires html-to-image library. Please install it with: npm install html-to-image');
     } else {
       alert('Failed to export PNG. Please try again.');
@@ -60,7 +60,7 @@ export async function downloadJPEG(element: HTMLElement, filename: string): Prom
     console.error('Error exporting JPEG:', error);
     
     // Fallback: try to install the library
-    if (error.message?.includes('Cannot resolve module')) {
+    if (error instanceof Error && error.message?.includes('Cannot resolve module')) {
       alert('JPEG export requires html-to-image library. Please install it with: npm install html-to-image');
     } else {
       alert('Failed to export JPEG. Please try again.');
@@ -93,7 +93,7 @@ export async function downloadSVG(element: HTMLElement, filename: string): Promi
     console.error('Error exporting SVG:', error);
     
     // Fallback: try to install the library
-    if (error.message?.includes('Cannot resolve module')) {
+    if (error instanceof Error && error.message?.includes('Cannot resolve module')) {
       alert('SVG export requires html-to-image library. Please install it with: npm install html-to-image');
     } else {
       alert('Failed to export SVG. Please try again.');
