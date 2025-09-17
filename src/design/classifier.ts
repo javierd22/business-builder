@@ -166,8 +166,8 @@ function classifyByContext(idea: string, persona?: string, job?: string): Vertic
  * @returns Suggested vertical or null if no valid suggestion
  */
 export function suggestVerticalFromMeta(meta: Record<string, unknown>): Vertical | null {
-  if (meta?.verticals?.[0]) {
-    const llmVertical = meta.verticals[0].toLowerCase();
+  if (meta?.verticals && Array.isArray(meta.verticals) && meta.verticals.length > 0) {
+    const llmVertical = (meta.verticals[0] as string).toLowerCase();
     const validVertical = Object.keys(VERTICAL_KEYWORDS).find(v => 
       v === llmVertical || v.replace('_', ' ') === llmVertical
     ) as Vertical;
