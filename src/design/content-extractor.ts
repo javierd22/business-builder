@@ -108,7 +108,7 @@ function generateTagline(idea: string): string {
   }
   
   if (ideaLower.includes('course') || ideaLower.includes('learn')) {
-    return 'Master new skills with expert guidance';
+    return 'Master new abilities with expert guidance';
   }
   
   if (ideaLower.includes('service') || ideaLower.includes('booking')) {
@@ -169,7 +169,7 @@ function generateFeatures(idea: string): string[] {
     features.push('Strategic thinking');
     features.push('End-to-end project management');
   } else if (ideaLower.includes('food') || ideaLower.includes('restaurant')) {
-    features.push('Fresh, quality ingredients');
+    features.push('Fresh, quality components');
     features.push('Authentic flavors');
     features.push('Warm, welcoming atmosphere');
   } else if (ideaLower.includes('event') || ideaLower.includes('conference')) {
