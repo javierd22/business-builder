@@ -40,25 +40,23 @@ const DesignRenderer = forwardRef<HTMLDivElement, DesignRendererProps>(
         }
       });
 
-      const blockProps = { props, style };
-
       switch (block.type) {
         case 'Hero':
-          return <HeroBlock key={index} {...blockProps} />;
+          return <HeroBlock key={index} props={props as any} style={style} />;
         case 'LogoRow':
-          return <LogoRowBlock key={index} {...blockProps} />;
+          return <LogoRowBlock key={index} props={props as any} style={style} />;
         case 'FeatureGrid':
-          return <FeatureGridBlock key={index} {...blockProps} />;
+          return <FeatureGridBlock key={index} props={props as any} style={style} />;
         case 'SplitImage':
-          return <SplitImageBlock key={index} {...blockProps} />;
+          return <SplitImageBlock key={index} props={props as any} style={style} />;
         case 'Pricing':
-          return <PricingBlock key={index} {...blockProps} />;
+          return <PricingBlock key={index} props={props as any} style={style} />;
         case 'Testimonial':
-          return <TestimonialBlock key={index} {...blockProps} />;
+          return <TestimonialBlock key={index} props={props as any} style={style} />;
         case 'FAQ':
-          return <FAQBlock key={index} {...blockProps} />;
+          return <FAQBlock key={index} props={props as any} style={style} />;
         case 'Footer':
-          return <FooterBlock key={index} {...blockProps} />;
+          return <FooterBlock key={index} props={props as any} style={style} />;
         default:
           return null;
       }
