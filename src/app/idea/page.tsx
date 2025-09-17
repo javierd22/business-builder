@@ -145,7 +145,10 @@ export default function IdeaPage() {
           )}
         </div>
 
-        <Card className="max-w-3xl mx-auto">
+        <Card className={`max-w-3xl mx-auto transition-all relative ${!isConsented ? 'cursor-pointer hover:shadow-lg hover:border-[#F7DC6F] hover:scale-[1.01]' : ''}`} onClick={!isConsented ? () => router.push('/settings/privacy') : undefined}>
+          {!isConsented && (
+            <div className="absolute inset-0 bg-gradient-to-br from-[#FFF9E6]/20 to-[#FFF5CC]/20 rounded-lg pointer-events-none z-10"></div>
+          )}
           <CardHeader>
             <CardTitle className="text-2xl text-[#4A5568]">Business Idea</CardTitle>
             <CardDescription>
@@ -155,10 +158,15 @@ export default function IdeaPage() {
                   💡 As a {profile.persona.toLowerCase()}, focus on how this idea helps you {profile.job.toLowerCase()}.
                 </span>
               )}
+              {!isConsented && (
+                <span className="block mt-2 text-sm text-[#8B7355] font-medium">
+                  👆 Click anywhere to accept privacy terms and start writing
+                </span>
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={onSubmit} className="space-y-6">
+            <form onSubmit={onSubmit} className="space-y-6" onClick={(e) => e.stopPropagation()}>
               <div>
                 <Textarea
                   value={idea}
@@ -231,7 +239,7 @@ export default function IdeaPage() {
                   <button
                     key={suggestion}
                     type="button"
-                    onClick={() => setIdea(suggestion)}
+                    onClick={!isConsented ? () => router.push('/settings/privacy') : () => setIdea(suggestion)}
                     className="rounded-full border border-[#E8E9EA] bg-gradient-to-br from-white via-[#FEFEFE] to-[#FCFCFC] px-3 py-1 text-sm text-[#4A5568] shadow-[0_1px_3px_rgba(0,0,0,0.05)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:border-[#F7DC6F] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F7DC6F] font-medium"
                     disabled={isLoading}
                   >
