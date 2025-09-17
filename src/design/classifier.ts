@@ -62,8 +62,8 @@ export function classifyVertical(input: ClassificationInput): Vertical {
   const { idea, persona, job, meta } = input;
   
   // If meta contains vertical information from LLM, prefer it
-  if (meta?.verticals?.[0]) {
-    const llmVertical = meta.verticals[0].toLowerCase();
+  if (meta?.verticals && Array.isArray(meta.verticals) && meta.verticals.length > 0) {
+    const llmVertical = (meta.verticals[0] as string).toLowerCase();
     const validVertical = Object.keys(VERTICAL_KEYWORDS).find(v => 
       v === llmVertical || v.replace('_', ' ') === llmVertical
     ) as Vertical;
