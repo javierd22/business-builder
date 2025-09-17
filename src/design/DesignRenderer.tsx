@@ -42,21 +42,21 @@ const DesignRenderer = forwardRef<HTMLDivElement, DesignRendererProps>(
 
       switch (block.type) {
         case 'Hero':
-          return <HeroBlock key={index} props={props as any} style={style} />;
+          return <HeroBlock key={index} props={props as Record<string, unknown>} style={style} />;
         case 'LogoRow':
-          return <LogoRowBlock key={index} props={props as any} style={style} />;
+          return <LogoRowBlock key={index} props={props as Record<string, unknown>} style={style} />;
         case 'FeatureGrid':
-          return <FeatureGridBlock key={index} props={props as any} style={style} />;
+          return <FeatureGridBlock key={index} props={props as Record<string, unknown>} style={style} />;
         case 'SplitImage':
-          return <SplitImageBlock key={index} props={props as any} style={style} />;
+          return <SplitImageBlock key={index} props={props as Record<string, unknown>} style={style} />;
         case 'Pricing':
-          return <PricingBlock key={index} props={props as any} style={style} />;
+          return <PricingBlock key={index} props={props as Record<string, unknown>} style={style} />;
         case 'Testimonial':
-          return <TestimonialBlock key={index} props={props as any} style={style} />;
+          return <TestimonialBlock key={index} props={props as Record<string, unknown>} style={style} />;
         case 'FAQ':
-          return <FAQBlock key={index} props={props as any} style={style} />;
+          return <FAQBlock key={index} props={props as Record<string, unknown>} style={style} />;
         case 'Footer':
-          return <FooterBlock key={index} props={props as any} style={style} />;
+          return <FooterBlock key={index} props={props as Record<string, unknown>} style={style} />;
         default:
           return null;
       }
