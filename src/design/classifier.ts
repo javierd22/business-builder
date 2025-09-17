@@ -4,7 +4,7 @@ interface ClassificationInput {
   idea: string;
   persona?: string;
   job?: string;
-  meta?: any;
+  meta?: Record<string, unknown>;
 }
 
 // Keyword buckets for vertical classification
@@ -165,7 +165,7 @@ function classifyByContext(idea: string, persona?: string, job?: string): Vertic
  * @param meta - Meta data from PRD response
  * @returns Suggested vertical or null if no valid suggestion
  */
-export function suggestVerticalFromMeta(meta: any): Vertical | null {
+export function suggestVerticalFromMeta(meta: Record<string, unknown>): Vertical | null {
   if (meta?.verticals?.[0]) {
     const llmVertical = meta.verticals[0].toLowerCase();
     const validVertical = Object.keys(VERTICAL_KEYWORDS).find(v => 

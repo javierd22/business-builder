@@ -13,7 +13,7 @@ export interface CacheEntry {
 }
 
 export interface CacheKey {
-  step: 'plan' | 'ux';
+  step: 'plan' | 'ux' | 'preview';
   idea: string;
   persona?: string;
   job?: string;

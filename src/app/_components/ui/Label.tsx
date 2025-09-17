@@ -1,0 +1,20 @@
+import React from 'react';
+import { cn } from '@/lib/utils';
+
+export interface LabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> {
+  children: React.ReactNode;
+}
+
+export function Label({ children, className, ...props }: LabelProps) {
+  return (
+    <label
+      className={cn(
+        'text-sm font-medium text-[#8B6914] leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70',
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </label>
+  );
+}

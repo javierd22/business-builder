@@ -67,11 +67,11 @@ export default function PlanReviewPage() {
         llm: {
           ...project.llm,
           ux: {
-            provider: result.meta.provider,
-            model: result.meta.model,
-            durationMs: result.meta.durationMs,
-            tokensUsed: result.meta.tokensUsed,
-            costEstimate: result.meta.costEstimate,
+            provider: result.meta?.provider as string || 'unknown',
+            model: result.meta?.model as string || 'unknown',
+            durationMs: result.meta?.durationMs as number || 0,
+            tokensUsed: result.meta?.tokensUsed as number || 0,
+            costEstimate: result.meta?.costEstimate as number || 0,
           }
         }
       });

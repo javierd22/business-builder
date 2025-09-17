@@ -21,7 +21,7 @@ export default function RoadmapPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'P0' | 'P1'>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'backlog' | 'in_progress' | 'done'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'backlog' | 'in_progress' | 'review' | 'done'>('all');
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -257,7 +257,7 @@ export default function RoadmapPage() {
             
             <select
               value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value as any)}
+              onChange={(e) => setPriorityFilter(e.target.value as 'all' | 'P0' | 'P1')}
               className="px-4 py-2 border border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
             >
               <option value="all">All Priorities</option>
@@ -267,7 +267,7 @@ export default function RoadmapPage() {
             
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
+              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'backlog' | 'in_progress' | 'review' | 'done')}
               className="px-4 py-2 border border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
             >
               <option value="all">All Statuses</option>

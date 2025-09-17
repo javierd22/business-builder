@@ -55,7 +55,7 @@ export default function UXPreviewPage() {
     setError(null);
 
     try {
-      const result = await requestDeploy(projectId, project.prd, project.ux);
+      const result = await requestDeploy(projectId);
       
       updateProject(projectId, { 
         deploymentLink: result.url,

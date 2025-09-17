@@ -25,7 +25,7 @@ export default function TestimonialBlock({ props, style }: TestimonialBlockProps
             <div key={index} className={getCardClass(style)}>
               <div className="p-6">
                 <blockquote className={`text-lg ${tokens.colors.text.secondary} mb-6 italic`}>
-                  "{testimonial.quote}"
+                  &ldquo;{testimonial.quote}&rdquo;
                 </blockquote>
                 <div className="flex items-center">
                   {testimonial.avatar ? (

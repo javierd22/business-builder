@@ -19,24 +19,24 @@ interface DesignRendererProps {
 
 const DesignRenderer = forwardRef<HTMLDivElement, DesignRendererProps>(
   ({ preset, content, style }, ref) => {
-    const renderBlock = (block: any, index: number) => {
-      const props = { ...block.props };
+    const renderBlock = (block: Block<unknown>, index: number) => {
+      const props = { ...block.props } as Record<string, unknown>;
       
       // Replace placeholders with actual content
       Object.keys(props).forEach(key => {
         if (typeof props[key] === 'string') {
           props[key] = replacePlaceholders(props[key], content);
         } else if (Array.isArray(props[key])) {
-          props[key] = props[key].map((item: any) => {
+          props[key] = (props[key] as unknown[]).map((item: unknown) => {
             if (typeof item === 'string') {
               return replacePlaceholders(item, content);
             } else if (typeof item === 'object' && item !== null) {
-              return replaceObjectPlaceholders(item, content);
+              return replaceObjectPlaceholders(item as Record<string, unknown>, content);
             }
             return item;
           });
         } else if (typeof props[key] === 'object' && props[key] !== null) {
-          props[key] = replaceObjectPlaceholders(props[key], content);
+          props[key] = replaceObjectPlaceholders(props[key] as Record<string, unknown>, content);
         }
       });
 
@@ -91,23 +91,23 @@ function replacePlaceholders(text: string, content: Partial<DesignContent>): str
     .replace(/\{\{faq\.2\.a\}\}/g, content.faq?.[2]?.a || 'Absolutely! You\'ll love the results.');
 }
 
-function replaceObjectPlaceholders(obj: any, content: Partial<DesignContent>): any {
+function replaceObjectPlaceholders(obj: Record<string, unknown>, content: Partial<DesignContent>): Record<string, unknown> {
   const result = { ...obj };
   
   Object.keys(result).forEach(key => {
     if (typeof result[key] === 'string') {
       result[key] = replacePlaceholders(result[key], content);
     } else if (Array.isArray(result[key])) {
-      result[key] = result[key].map((item: any) => {
+      result[key] = (result[key] as unknown[]).map((item: unknown) => {
         if (typeof item === 'string') {
           return replacePlaceholders(item, content);
         } else if (typeof item === 'object' && item !== null) {
-          return replaceObjectPlaceholders(item, content);
+          return replaceObjectPlaceholders(item as Record<string, unknown>, content);
         }
         return item;
       });
     } else if (typeof result[key] === 'object' && result[key] !== null) {
-      result[key] = replaceObjectPlaceholders(result[key], content);
+      result[key] = replaceObjectPlaceholders(result[key] as Record<string, unknown>, content);
     }
   });
   

@@ -24,7 +24,7 @@ export default function FAQBlock({ props, style }: FAQBlockProps) {
         )}
         <div className="space-y-4">
           {props.faqs.map((faq, index) => (
-            <div key={index} className={`${tokens.colors.surface} ${tokens.border} border rounded-lg`}>
+            <div key={index} className={`${tokens.colors.surface} border ${tokens.colors.border} rounded-lg`}>
               <button
                 className={`w-full px-6 py-4 text-left flex justify-between items-center ${getFocusRingClass(style)}`}
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}

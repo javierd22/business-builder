@@ -22,8 +22,9 @@ const TimeoutFallback: React.FC<TimeoutFallbackProps> = ({
   const stepName = step === 'plan' ? 'Business Plan' : 'UX Design';
   
   return (
-    <Card className="border border-yellow-200 bg-yellow-50 shadow-sm" role="alert" aria-live="polite">
-      <CardContent className="p-6">
+    <div role="alert" aria-live="polite">
+      <Card className="border border-yellow-200 bg-yellow-50 shadow-sm">
+        <CardContent className="p-6">
         <div className="flex items-start gap-4">
           <div className="flex-shrink-0">
             <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
@@ -52,12 +53,12 @@ const TimeoutFallback: React.FC<TimeoutFallbackProps> = ({
             <div className="text-sm text-yellow-700 mb-4">
               {fallbackAttempted ? (
                 <>
-                  We tried a lighter version but it's still taking longer than usual. 
+                  We tried a lighter version but it&apos;s still taking longer than usual. 
                   This might be due to high server load or network conditions.
                 </>
               ) : (
                 <>
-                  This is taking longer than expected. We're trying a lighter version 
+                  This is taking longer than expected. We&apos;re trying a lighter version 
                   that should be faster while maintaining quality.
                 </>
               )}
@@ -74,7 +75,7 @@ const TimeoutFallback: React.FC<TimeoutFallbackProps> = ({
               
               <Button
                 onClick={onRetry}
-                variant="outline"
+                variant="secondary"
                 className="border-yellow-300 text-yellow-800 hover:bg-yellow-100 focus-visible:ring-[#F7DC6F]"
               >
                 Try Again
@@ -94,8 +95,9 @@ const TimeoutFallback: React.FC<TimeoutFallbackProps> = ({
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

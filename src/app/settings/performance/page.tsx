@@ -28,20 +28,20 @@ import {
   formatCost, 
   getCostEfficiencyRating 
 } from '@/lib/cost-model';
-import { events, clearAllEvents } from '@/lib/observability';
+import { getEvents, clearEvents } from '@/lib/observability';
 
 const PerformanceDashboard: React.FC = () => {
   const [settings, setSettings] = useState<PerformanceSettings>(getPerformanceSettings());
   const [cacheStats, setCacheStats] = useState(getCacheStats());
   const [cacheEnabled, setCacheEnabledState] = useState(isCacheEnabled());
-  const [recentEvents, setRecentEvents] = useState(events(100));
+  const [recentEvents, setRecentEvents] = useState(getEvents(100));
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     // Refresh data periodically
     const interval = setInterval(() => {
       setCacheStats(getCacheStats());
-      setRecentEvents(events(100));
+      setRecentEvents(getEvents(100));
     }, 5000);
 
     return () => clearInterval(interval);
@@ -67,7 +67,7 @@ const PerformanceDashboard: React.FC = () => {
   };
 
   const handleClearObservability = () => {
-    clearAllEvents();
+    clearEvents();
     setRecentEvents([]);
   };
 
@@ -281,7 +281,7 @@ const PerformanceDashboard: React.FC = () => {
               </div>
               <Button
                 onClick={handleClearCache}
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 className="w-full border-[#E5D5B7] text-[#8B6914] hover:bg-[#F5F0E8] focus-visible:ring-[#F7DC6F]"
               >
@@ -324,8 +324,8 @@ const PerformanceDashboard: React.FC = () => {
                 <Label htmlFor="depth" className="text-[#8B6914]">Default Depth</Label>
                 <Select
                   value={settings.defaultDepth}
-                  onValueChange={(value: 'brief' | 'standard' | 'deep') => 
-                    setSettings(prev => ({ ...prev, defaultDepth: value }))
+                  onValueChange={(value) => 
+                    setSettings(prev => ({ ...prev, defaultDepth: value as 'brief' | 'standard' | 'deep' }))
                   }
                 >
                   <SelectTrigger className="border-[#E5D5B7] focus:ring-[#F7DC6F]">
@@ -343,8 +343,8 @@ const PerformanceDashboard: React.FC = () => {
                 <Label htmlFor="format" className="text-[#8B6914]">Default Format</Label>
                 <Select
                   value={settings.defaultFormat}
-                  onValueChange={(value: 'markdown' | 'bulleted') => 
-                    setSettings(prev => ({ ...prev, defaultFormat: value }))
+                  onValueChange={(value) => 
+                    setSettings(prev => ({ ...prev, defaultFormat: value as 'markdown' | 'bulleted' }))
                   }
                 >
                   <SelectTrigger className="border-[#E5D5B7] focus:ring-[#F7DC6F]">
@@ -410,7 +410,7 @@ const PerformanceDashboard: React.FC = () => {
               <div className="pt-4 border-t border-[#E5D5B7]">
                 <Button
                   onClick={handleClearObservability}
-                  variant="outline"
+                  variant="secondary"
                   className="w-full border-[#E5D5B7] text-[#8B6914] hover:bg-[#F5F0E8] focus-visible:ring-[#F7DC6F]"
                 >
                   Clear All Logs
