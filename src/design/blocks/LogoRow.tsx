@@ -24,7 +24,7 @@ export default function LogoRowBlock({ props, style }: LogoRowBlockProps) {
           {props.logos.map((logo, index) => (
             <div 
               key={index}
-              className={`${tokens.colors.text.muted} text-lg font-medium px-4 py-2 ${tokens.border} border rounded-lg`}
+              className={`${tokens.colors.text.muted} text-lg font-medium px-4 py-2 border ${tokens.colors.border} rounded-lg`}
             >
               {logo}
             </div>
