@@ -145,11 +145,15 @@ export default function IdeaPage() {
           )}
         </div>
 
-        <Card className={`max-w-3xl mx-auto transition-all relative ${!isConsented ? 'cursor-pointer hover:shadow-lg hover:border-[#F7DC6F] hover:scale-[1.01]' : ''}`} onClick={!isConsented ? () => router.push('/settings/privacy') : undefined}>
-          {!isConsented && (
-            <div className="absolute inset-0 bg-gradient-to-br from-[#FFF9E6]/20 to-[#FFF5CC]/20 rounded-lg pointer-events-none z-10"></div>
-          )}
-          <CardHeader>
+        <div 
+          className={`max-w-3xl mx-auto transition-all relative ${!isConsented ? 'cursor-pointer hover:shadow-lg hover:scale-[1.01]' : ''}`} 
+          onClick={!isConsented ? () => router.push('/settings/privacy') : undefined}
+        >
+          <Card className="relative">
+            {!isConsented && (
+              <div className="absolute inset-0 bg-gradient-to-br from-[#FFF9E6]/20 to-[#FFF5CC]/20 rounded-lg pointer-events-none z-10"></div>
+            )}
+            <CardHeader>
             <CardTitle className="text-2xl text-[#4A5568]">Business Idea</CardTitle>
             <CardDescription>
               Be as detailed as possible. The more context you provide, the better your PRD will be.
@@ -261,7 +265,8 @@ export default function IdeaPage() {
               </div>
             )}
           </CardContent>
-        </Card>
+          </Card>
+        </div>
 
         {/* Instant Preview */}
         {NEXT_PUBLIC_SHOW_INSTANT_PREVIEW && idea.trim().length > 10 && (
